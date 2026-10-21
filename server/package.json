@@ -1,0 +1,34 @@
+{
+  "name": "@athlos/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "node --import tsx src/main.ts",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "import:exercises": "tsx src/scripts/import-exercises.ts",
+    "hash-password": "tsx src/scripts/hash-password.ts"
+  },
+  "dependencies": {
+    "@athlos/shared": "^0.1.0",
+    "@fastify/rate-limit": "^11.2.1",
+    "@fastify/static": "^10.1.6",
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.4",
+    "fastify": "^5.12.7",
+    "sharp": "^0.35.5",
+    "tsx": "^4.23.15",
+    "web-push": "^3.6.7",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.5",
+    "@types/web-push": "^3.6.4",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

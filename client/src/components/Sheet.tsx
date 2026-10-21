@@ -1,0 +1,31 @@
+import { type ReactNode, useEffect, useRef } from 'react';
+import { Icon } from './Icon.tsx';
+
+export function Sheet({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    document.addEventListener('keydown', onKey);
+    const previous = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+      previous?.focus();
+    };
+  }, [onClose]);
+  return (
+    <div className="sheet-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={title} ref={ref} tabIndex={-1}>
+        <div className="row between" style={{ padding: '14px 16px' }}>
+          <h2 style={{ fontSize: 17 }}>{title}</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Fermer">
+            <Icon name="close" size={20} />
+          </button>
+        </div>
+        <div className="sheet-body">{children}</div>
+      </div>
+    </div>
+  );
+}

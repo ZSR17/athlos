@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data/
+# Installation personnelle (scripts et config de mon serveur), gardée hors du dépôt
+deploy/
+*.log
+.env
+.env.*
+!.env.example
