@@ -1,3 +1,4 @@
+import type { SetTarget } from '@athlos/shared';
 import { type PlanItem, type SetValues, type Step, buildSteps, nextOpenStep, restAfter, stepKey } from '../lib/session.ts';
 import { updateAll } from '../lib/targets.ts';
 import { type LocalSession, type LocalSetLog, type AthlosDb, db as defaultDb } from './db.ts';
@@ -139,9 +140,9 @@ export async function finishSession(db: AthlosDb = defaultDb): Promise<string | 
     await discardSession(db);
     return null;
   }
-  await db.transaction('rw', db.sessions, db.workoutItems, db.meta, async () => {
+  await db.transaction('rw', db.sessions, db.workouts, db.workoutItems, db.meta, async () => {
     await db.sessions.update(live.sessionId, { endedAt: Date.now(), ...touched() });
-    await updatePlan(db, logs);
+    await updatePlans(db, live.plan, logs);
     await db.meta.delete(LIVE);
   });
   return live.sessionId;
@@ -150,23 +151,46 @@ export async function finishSession(db: AthlosDb = defaultDb): Promise<string | 
 const valuesDone = (l: LocalSetLog): SetValues =>
   Object.fromEntries((['reps', 'weightG', 'durationS', 'distanceM'] as const).filter((k) => l[k] != null).map((k) => [k, l[k]]));
 
-// The workout's plan takes the values just done, so editing it shows them. Only planned sets change
-// (extra sets are not added); in simple mode (identical sets) the first working set done is the model.
-async function updatePlan(db: AthlosDb, logs: LocalSetLog[]) {
-  for (const itemId of new Set(logs.map((l) => l.workoutItemId))) {
-    const item = itemId ? await db.workoutItems.get(itemId) : undefined;
-    if (!item || item.deleted) continue;
-    const itemLogs = logs.filter((l) => l.workoutItemId === itemId && l.setIndex < item.targets.length).sort((a, b) => a.setIndex - b.setIndex);
-    let targets = item.targets;
-    if (item.mode === 'simple') {
-      const model = itemLogs.find((l) => l.kind !== 'warmup');
-      if (model) targets = updateAll(targets, valuesDone(model));
-    } else {
-      targets = targets.map((t, i) => {
-        const log = itemLogs.find((l) => l.setIndex === i);
-        return log ? { ...t, ...valuesDone(log) } : t;
-      });
-    }
+// Sets are matched across workouts by their rank among warm-ups or among working sets ("2nd working
+// set"), since two workouts may plan a different number of warm-ups for the same exercise.
+const rankKey = (targets: SetTarget[], index: number) => {
+  const warmup = targets[index]!.kind === 'warmup';
+  return `${warmup}:${targets.slice(0, index).filter((t) => (t.kind === 'warmup') === warmup).length}`;
+};
+
+// Every workout using an exercise just done takes the values done, so editing any of them shows them.
+// Only planned sets change (extra sets are not added); in simple mode (identical sets) the first
+// working set done is the model. An exercise planned twice in the session: its own item uses its own
+// sets, other workouts the first occurrence.
+async function updatePlans(db: AthlosDb, plan: PlanItem[], logs: LocalSetLog[]) {
+  const done = new Map<string, { values: Map<string, SetValues>; model: SetValues | undefined }>();
+  for (const p of plan) {
+    const own = logs
+      .filter((l) => l.workoutItemId === p.itemId && l.setIndex < p.targets.length)
+      .sort((a, b) => a.setIndex - b.setIndex);
+    if (!own.length) continue;
+    const firstWorking = own.find((l) => l.kind !== 'warmup');
+    done.set(p.itemId, {
+      values: new Map(own.map((l) => [rankKey(p.targets, l.setIndex), valuesDone(l)])),
+      model: firstWorking && valuesDone(firstWorking),
+    });
+  }
+  const byExercise = new Map<string, string>();
+  for (const p of plan) if (done.has(p.itemId) && !byExercise.has(p.exerciseId)) byExercise.set(p.exerciseId, p.itemId);
+
+  const items = await db.workoutItems.where('exerciseId').anyOf([...byExercise.keys()]).toArray();
+  for (const item of items) {
+    const source = done.get(item.id) ?? done.get(byExercise.get(item.exerciseId)!);
+    if (item.deleted || !source || (await db.workouts.get(item.workoutId))?.deleted) continue;
+    const targets =
+      item.mode === 'simple'
+        ? source.model
+          ? updateAll(item.targets, source.model)
+          : item.targets
+        : item.targets.map((t, i) => {
+            const values = source.values.get(rankKey(item.targets, i));
+            return values ? { ...t, ...values } : t;
+          });
     if (JSON.stringify(targets) !== JSON.stringify(item.targets)) await db.workoutItems.update(item.id, { targets, ...touched() });
   }
 }

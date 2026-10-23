@@ -10,7 +10,7 @@ import {
   sessionLogs,
   startSession,
 } from '../src/db/sessions.ts';
-import { addItem, createWorkout, liveItems, toggleSupersetWithNext, updateItem } from '../src/db/workouts.ts';
+import { addItem, createWorkout, deleteWorkout, liveItems, toggleSupersetWithNext, updateItem } from '../src/db/workouts.ts';
 import { metricsForType, recordFor } from '../src/lib/progress.ts';
 import { type PlanItem, buildSteps, estimate1RM, nextOpenStep, prefill, restAfter } from '../src/lib/session.ts';
 
@@ -159,6 +159,38 @@ describe('session flow', () => {
     // Per set: only the sets done change.
     expect(b!.targets.map((t) => t.durationS)).toEqual([45, 30]);
     expect(b!.dirty).toBe(1);
+  });
+
+  it('updates every workout planning the same exercise', async () => {
+    const legs = await createWorkout('Jambes', db);
+    await addItem(legs, squat, db);
+    const full = await createWorkout('Full body', db);
+    await addItem(full, squat, db);
+    const old = await createWorkout('Ancienne', db);
+    await addItem(old, squat, db);
+    await deleteWorkout(old, db);
+    const [legsSquat] = await liveItems(db, legs);
+    const [fullSquat] = await liveItems(db, full);
+    await updateItem(legsSquat!.id, { mode: 'per_set', targets: sets(2) }, db);
+    // Same exercise with a warm-up first: matched by working set, the warm-up is left alone.
+    const warmup = { kind: 'warmup' as const, reps: 12, weightG: 40000, restS: 60 };
+    await updateItem(fullSquat!.id, { mode: 'per_set', targets: [warmup, ...sets(3)] }, db);
+
+    await startSession(legs, db);
+    let live = (await getLive(db))!;
+    await logSet(live, 0, { reps: 6, weightG: 100000 }, db);
+    live = (await getLive(db))!;
+    await logSet(live, 1, { reps: 5, weightG: 102500 }, db);
+    await finishSession(db);
+
+    expect((await liveItems(db, full))[0]!.targets.map((t) => [t.kind, t.reps, t.weightG])).toEqual([
+      ['warmup', 12, 40000],
+      ['normal', 6, 100000],
+      ['normal', 5, 102500],
+      ['normal', 8, undefined],
+    ]);
+    const [oldSquat] = await db.workoutItems.where('workoutId').equals(old).toArray();
+    expect(oldSquat!.targets[0]!.weightG).not.toBe(100000);
   });
 
   it('discards a session without any set', async () => {
