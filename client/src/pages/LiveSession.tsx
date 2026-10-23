@@ -302,7 +302,7 @@ export function LiveSession() {
           </button>
           <button
             type="button"
-            className="btn btn-ghost btn-danger"
+            className="btn btn-danger"
             onClick={async () => {
               if (confirm('Abandonner la séance ? Les séries validées seront supprimées.')) {
                 await discardSession();
