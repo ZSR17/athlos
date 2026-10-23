@@ -27,9 +27,10 @@ function useWorkoutSummaries() {
 
 type Summary = NonNullable<ReturnType<typeof useWorkoutSummaries>>[number];
 
-// A workout of the list. Pressing and holding the card (or Space on it) lets it be moved; a plain
-// click still opens it.
+// A workout of the list. Dragging the card moves it; a plain click opens it. From the keyboard the card
+// is the stop: Space picks it up (arrows, then Space to drop), Enter opens it.
 function WorkoutCard({ workout, onStart }: { workout: Summary; onStart: () => void }) {
+  const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: workout.id });
   return (
     <div
@@ -47,12 +48,24 @@ function WorkoutCard({ workout, onStart }: { workout: Summary; onStart: () => vo
       }}
       {...attributes}
       {...listeners}
-      // Keys pressed on the link or the button inside are theirs, not a move of the card.
-      onKeyDown={(e) => e.target === e.currentTarget && listeners?.onKeyDown?.(e)}
+      // Keys on the Start button are the button's; while the card is being moved, dnd-kit handles them
+      // (arrows, Space or Enter to drop).
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget || isDragging) return;
+        if (e.key === 'Enter') navigate(`/seances/${workout.id}`);
+        else listeners?.onKeyDown?.(e);
+      }}
       aria-roledescription="séance déplaçable"
+      aria-label={workout.name}
     >
-      {/* Not a native link drag: holding the card moves it. */}
-      <Link to={`/seances/${workout.id}`} draggable={false} className="row grow" style={{ textDecoration: 'none', color: 'var(--text)' }}>
+      {/* For the mouse only (the card is the keyboard stop), and no native link drag. */}
+      <Link
+        to={`/seances/${workout.id}`}
+        tabIndex={-1}
+        draggable={false}
+        className="row grow"
+        style={{ textDecoration: 'none', color: 'var(--text)' }}
+      >
         <span
           className="num"
           style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 12, background: 'var(--surface2)', display: 'grid', placeItems: 'center', color: 'var(--accent-text)', fontSize: 18 }}
@@ -98,7 +111,7 @@ export function Home() {
     return order.map((id) => byId.get(id)).filter((w) => w !== undefined);
   }, [workouts, order]);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 6 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   // Dropping a card on its link must not open it (dnd-kit stops the click, not the link's navigation).
