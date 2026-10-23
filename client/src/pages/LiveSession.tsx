@@ -217,7 +217,7 @@ export function LiveSession() {
                     </span>
                     <span className="small muted ellipsis">{prev ? formatSetValues(type, prev) : '—'}</span>
                     <span className="num ellipsis" style={{ fontSize: 18 }}>
-                      {log ? formatSetValues(type, log) : isCurrent ? formatSetValues(type, draft) : formatSetValues(type, target)}
+                      {formatSetValues(type, log ?? (isCurrent ? draft : prefill(target, prev)))}
                     </span>
                     <span className={`check${log ? ' on' : ''}`} aria-label={log ? 'Série validée' : 'Série à faire'}>
                       {log && <Icon name="check" size={16} strokeWidth={3} />}
