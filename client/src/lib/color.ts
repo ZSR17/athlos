@@ -17,24 +17,6 @@ export function onColor(bg: string): string {
   return contrastRatio(bg, '#0E1012') >= contrastRatio(bg, '#FFFFFF') ? '#0E1012' : '#FFFFFF';
 }
 
-function hue(hex: string): number {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
-  const max = Math.max(r, g, b);
-  const d = max - Math.min(r, g, b);
-  if (d === 0) return 0;
-  const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-  return (h * 60 + 360) % 360;
-}
-
-// Primary and secondary muscle colours must stay distinguishable on the body map. Two shades of the
-// same hue blur together even with some lightness gap (e.g. bright vs dark orange), and colours of
-// almost equal lightness are hard to tell apart for colour-blind users whatever the hue.
-export function tooSimilar(a: string, b: string): boolean {
-  const ratio = contrastRatio(a, b);
-  const dh = Math.abs(hue(a) - hue(b));
-  return ratio < 1.4 || (Math.min(dh, 360 - dh) < 30 && ratio < 3);
-}
-
 export function isHexColor(value: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(value);
 }

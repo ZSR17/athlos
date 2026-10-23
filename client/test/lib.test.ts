@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contrastRatio, onColor, tooSimilar } from '../src/lib/color.ts';
+import { contrastRatio, onColor } from '../src/lib/color.ts';
 import { formatDuration, formatKg, formatSetValues, parseDuration, parseKg, parseKm } from '../src/lib/format.ts';
 import { regionState } from '../src/lib/muscles.ts';
 import { addSet, defaultTargets, removeSet, setSimpleCount, toSimple, updateAll } from '../src/lib/targets.ts';
@@ -9,15 +9,6 @@ describe('color', () => {
     expect(onColor('#D4FF3A')).toBe('#0E1012');
     expect(onColor('#1D3A8A')).toBe('#FFFFFF');
     expect(contrastRatio('#000000', '#FFFFFF')).toBeCloseTo(21);
-  });
-
-  it('flags muscle colours that are hard to tell apart', () => {
-    // The pair the user found too close in the first mock-up.
-    expect(tooSimilar('#FF6A2B', '#A34E28')).toBe(true);
-    expect(tooSimilar('#FF4D2E', '#FF4D2E')).toBe(true);
-    // Current defaults.
-    expect(tooSimilar('#FF4D2E', '#FFD166')).toBe(false);
-    expect(tooSimilar('#3A86FF', '#FFE8A3')).toBe(false);
   });
 });
 

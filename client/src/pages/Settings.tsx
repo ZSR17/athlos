@@ -8,7 +8,7 @@ import { db } from '../db/db.ts';
 import { resetColors, setAppearance, useAppearance } from '../lib/appearance.ts';
 import { api, logout } from '../lib/api.ts';
 import { BackupError, downloadBackup, exportData, importData } from '../lib/backup.ts';
-import { onColor, tooSimilar } from '../lib/color.ts';
+import { onColor } from '../lib/color.ts';
 import { soundSettings, testBeep, useNow } from '../lib/feedback.ts';
 import { formatBytes } from '../lib/format.ts';
 import { type SyncState, enableSharedAppearance, syncStatus } from '../sync/engine.ts';
@@ -280,7 +280,6 @@ const THEMES: { id: Appearance['theme']; label: string }[] = [
 export function Settings() {
   const a = useAppearance();
   const shared = syncSettings.use().shareAppearance;
-  const close = tooSimilar(a.musclePrimary, a.muscleSecondary);
 
   return (
     <div className="page" style={{ maxWidth: 720 }}>
@@ -350,11 +349,6 @@ export function Settings() {
               colors={{ primary: a.musclePrimary, secondary: a.muscleSecondary }}
             />
           </div>
-          {close && (
-            <p className="small" role="status" style={{ margin: 0, color: 'var(--warn)', lineHeight: 1.45 }}>
-              Les couleurs principal et secondaire se ressemblent : elles seront difficiles à distinguer sur la silhouette.
-            </p>
-          )}
           <button type="button" className="btn btn-ghost" style={{ alignSelf: 'flex-start', color: 'var(--muted)' }} onClick={resetColors}>
             Rétablir les couleurs par défaut
           </button>
