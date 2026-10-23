@@ -145,7 +145,7 @@ export function WorkoutItemCard({ item, exercise, supersetLabel }: Props) {
                   type="button"
                   className={`kind-btn${t.kind === 'warmup' ? ' warmup' : ''}`}
                   onClick={() => setTargets(updateOne(item.targets, idx, { kind: t.kind === 'warmup' ? 'normal' : 'warmup' }))}
-                  aria-label={`Série ${idx + 1} : ${t.kind === 'warmup' ? 'échauffement' : 'série de travail'}, toucher pour changer`}
+                  aria-label={`Série ${idx + 1} : ${t.kind === 'warmup' ? 'échauffement' : 'série de travail'}, cliquer pour changer`}
                 >
                   {t.kind === 'warmup' ? 'Écha.' : workingIndex}
                 </button>

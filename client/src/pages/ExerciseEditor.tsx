@@ -75,7 +75,7 @@ export function ExerciseEditor() {
   const set = (patch: Partial<ExerciseFields>) => setF({ ...f, ...patch });
   const level = (m: MuscleId): Level =>
     f.primaryMuscles.includes(m) ? 'primary' : f.secondaryMuscles.includes(m) ? 'secondary' : null;
-  // Tap: none -> main -> secondary -> none.
+  // Click: none -> main -> secondary -> none.
   const cycle = (m: MuscleId) => {
     const l = level(m);
     set({
@@ -193,7 +193,7 @@ export function ExerciseEditor() {
 
       <section className="stack" style={{ gap: 8 }}>
         <h2 className="label">Muscles</h2>
-        <span className="small muted">Touche une fois pour principal, deux fois pour secondaire.</span>
+        <span className="small muted">Clique une fois pour principal, deux fois pour secondaire.</span>
         <div className="row wrap" style={{ alignItems: 'flex-start', gap: 16 }}>
           <div className="chips-wrap grow" role="group" aria-label="Muscles travaillés" style={{ flexBasis: 280 }}>
             {MUSCLE_IDS.map((m) => {

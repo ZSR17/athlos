@@ -41,8 +41,6 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   font-size: 15px;
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
 }
 button,
 input,
@@ -63,20 +61,10 @@ h3 {
   margin: 0;
 }
 
-/* Scrollbars: invisible on touch screens, thin and themed with a mouse. */
-@media (pointer: coarse) {
-  * {
-    scrollbar-width: none;
-  }
-  *::-webkit-scrollbar {
-    display: none;
-  }
-}
-@media (pointer: fine) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--line) transparent;
-  }
+/* Scrollbars: thin and themed. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 
 .sr-only {
@@ -570,7 +558,7 @@ h3 {
     opacity: 0;
   }
 }
-/* Full-bleed photo on phones, rounded card on wide screens. */
+/* Full-bleed photo in narrow windows, rounded card on wide screens. */
 .page-hero {
   padding-top: 0;
 }
@@ -733,7 +721,6 @@ h3 {
   color: var(--superset);
 }
 .drag-handle {
-  touch-action: none;
   cursor: grab;
   color: var(--muted);
   background: transparent;
@@ -866,7 +853,6 @@ h3 {
 /* ---------- Charts & stats ---------- */
 .chart {
   position: relative;
-  touch-action: pan-y;
   outline-offset: 4px;
 }
 .chart svg {

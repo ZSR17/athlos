@@ -53,11 +53,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export function guessDeviceName(): string {
   const ua = navigator.userAgent;
-  if (/iPhone/.test(ua)) return 'iPhone';
-  if (/iPad/.test(ua)) return 'iPad';
-  if (/Android/.test(ua)) return 'Android';
   if (/Windows/.test(ua)) return 'PC Windows';
   if (/Mac OS X/.test(ua)) return 'Mac';
+  if (/Linux/.test(ua)) return 'PC Linux';
   return 'Navigateur';
 }
 

@@ -12,7 +12,7 @@ afterEach(async () => {
   await ctx.cleanup();
 });
 
-async function login(deviceName = 'iPhone') {
+async function login(deviceName = 'Firefox') {
   return ctx.app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { password: TEST_PASSWORD, deviceName } });
 }
 
@@ -61,7 +61,7 @@ describe('auth', () => {
 
     const devices = await ctx.app.inject({ method: 'GET', url: '/api/v1/devices', headers });
     expect(devices.statusCode).toBe(200);
-    expect(devices.json()).toEqual([expect.objectContaining({ name: 'iPhone', current: true })]);
+    expect(devices.json()).toEqual([expect.objectContaining({ name: 'Firefox', current: true })]);
 
     const logout = await ctx.app.inject({ method: 'POST', url: '/api/v1/auth/logout', headers });
     expect(logout.statusCode).toBe(200);
@@ -71,18 +71,18 @@ describe('auth', () => {
 
   it('can revoke another device', async () => {
     const pc = (await login('PC')).json();
-    const phone = (await login('iPhone')).json();
+    const other = (await login('Firefox')).json();
     const res = await ctx.app.inject({
       method: 'DELETE',
-      url: `/api/v1/devices/${phone.deviceId}`,
+      url: `/api/v1/devices/${other.deviceId}`,
       headers: { authorization: `Bearer ${pc.token}` },
     });
     expect(res.statusCode).toBe(200);
-    const phoneCall = await ctx.app.inject({
+    const otherCall = await ctx.app.inject({
       method: 'GET',
       url: '/api/v1/devices',
-      headers: { authorization: `Bearer ${phone.token}` },
+      headers: { authorization: `Bearer ${other.token}` },
     });
-    expect(phoneCall.statusCode).toBe(401);
+    expect(otherCall.statusCode).toBe(401);
   });
 });

@@ -165,7 +165,7 @@ describe('sync', () => {
       deleted: false,
     });
     await sync(0, { userSettings: [appearance('from-pc', '#D4FF3A', T + 1)] });
-    const res = await sync(0, { userSettings: [appearance('from-phone', '#7CC4FF', T + 2)] });
+    const res = await sync(0, { userSettings: [appearance('from-other', '#7CC4FF', T + 2)] });
     expect(ctx.db.select().from(userSettings).all()).toHaveLength(1);
     expect(res.changes.userSettings[0]).toMatchObject({ id: 'from-pc', value: { accent: '#7CC4FF' } });
 

@@ -22,7 +22,7 @@ function niceTicks(min: number, max: number, count = 4): number[] {
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
 
 // Single-series progression chart: 2px line with a light wash, end value labelled, crosshair +
-// tooltip on hover/touch and arrow keys. The values are also listed in a table under the chart.
+// tooltip on hover and arrow keys. The values are also listed in a table under the chart.
 export function LineChart({
   points,
   format,
@@ -80,7 +80,6 @@ export function LineChart({
       role="img"
       aria-label={`${label} : de ${format(points[0]!.y)} à ${format(last.y)} sur ${points.length} séances`}
       onPointerMove={(e) => nearest(e.clientX)}
-      onPointerDown={(e) => nearest(e.clientX)}
       onPointerLeave={() => setActive(null)}
       onBlur={() => setActive(null)}
       onKeyDown={(e) => {

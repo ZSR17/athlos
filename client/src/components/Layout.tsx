@@ -10,7 +10,7 @@ const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/reglages', label: 'Réglages', icon: 'settings' },
 ];
 
-// Bottom tab bar on phones, sidebar on wide screens (same app, see styles.css).
+// Bottom tab bar in narrow windows, sidebar on wide screens (same app, see styles.css).
 export function Layout() {
   const { pathname } = useLocation();
   const live = useLiveQuery(() => db.meta.get('live'), []);
