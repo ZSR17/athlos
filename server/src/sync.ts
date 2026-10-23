@@ -8,7 +8,7 @@ import {
   wireSchemas,
 } from '@athlos/shared';
 import { and, asc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
-import { type Db, type Tx, nextRev } from './db/index.ts';
+import { type Db, type Tx, instanceId, nextRev } from './db/index.ts';
 import { exercisesToWire, mergeExercise, overridesFor, pushExercise } from './exercises.ts';
 import * as schema from './db/schema.ts';
 
@@ -221,7 +221,16 @@ export function pullChanges(db: Db, userId: string, since: number, pageSize = PA
   return { rev: cutoff, hasMore, remaining: hasMore ? countAfter(db, userId, cutoff) : 0, changes };
 }
 
-export function sync(db: Db, userId: string, since: number, changes: Record<string, unknown[] | undefined>): SyncResponse {
+export function sync(
+  db: Db,
+  userId: string,
+  since: number,
+  changes: Record<string, unknown[] | undefined>,
+  deviceInstance?: string,
+): SyncResponse {
+  const instance = instanceId(db);
+  // Rows from another database must not be mixed into this one.
+  if (deviceInstance && deviceInstance !== instance) return { instance, rev: 0, hasMore: false, remaining: 0, changes: {}, rejected: [] };
   const pushed = pushChanges(db, userId, changes);
   const pulled = pullChanges(db, userId, since);
   for (const [table, rows] of Object.entries(pushed.bounced)) {
@@ -229,5 +238,5 @@ export function sync(db: Db, userId: string, since: number, changes: Record<stri
     const ids = new Set(list.map((r) => (r as { id: string }).id));
     for (const r of rows as { id: string }[]) if (!ids.has(r.id)) list.push(r);
   }
-  return { rev: pulled.rev, hasMore: pulled.hasMore, remaining: pulled.remaining, changes: pulled.changes, rejected: pushed.rejected };
+  return { instance, rev: pulled.rev, hasMore: pulled.hasMore, remaining: pulled.remaining, changes: pulled.changes, rejected: pushed.rejected };
 }

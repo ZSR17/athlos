@@ -106,8 +106,8 @@ npm run dev                               # API sur :3000 et app sur http://loca
 
 Les données de dev sont dans `server/data`, indépendantes de celles du serveur de production. Pour tester
 sur de vraies données, remplace son contenu (`athlos.db` et `media/`) par une copie de celles de la
-production, serveur de dev arrêté. Le navigateur de dev garde sa propre copie locale : vide ensuite les
-données du site `localhost:5173` et reconnecte-toi.
+production, serveur de dev arrêté, en supprimant la ligne `instance` de sa table `meta` : l'app du
+navigateur de dev voit alors que la base a changé et repart de zéro au lieu de mélanger les deux.
 
 | Commande | Rôle |
 | --- | --- |

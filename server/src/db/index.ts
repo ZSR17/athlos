@@ -37,6 +37,15 @@ export function nextRev(db: Db | Tx): number {
 }
 
 // Single-user for now, but every row already carries a user id.
+// Random id of this database, sent with each sync so devices notice when the data behind the server was
+// replaced (see SyncResponse.instance). Removing the `instance` row of a copy gives it a new one.
+export function instanceId(db: Db): string {
+  const existing = db.select().from(schema.meta).where(eq(schema.meta.key, 'instance')).get();
+  if (existing) return existing.value;
+  db.insert(schema.meta).values({ key: 'instance', value: randomUUID() }).onConflictDoNothing().run();
+  return instanceId(db);
+}
+
 export function ensureOwner(db: Db): string {
   const existing = db.select().from(schema.meta).where(eq(schema.meta.key, 'owner_id')).get();
   if (existing) return existing.value;

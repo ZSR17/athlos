@@ -116,6 +116,19 @@ describe('sync', () => {
     expect(again.changes).toEqual({});
   });
 
+  it('ignores changes made against another database and gives its own id', async () => {
+    const first = await sync(0);
+    expect(first.instance).toMatch(/^[0-9a-f-]{36}$/);
+    const res = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/v1/sync',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { since: 5, instance: 'another-database', changes: { workouts: [workout()] } },
+    });
+    expect(res.json()).toEqual({ instance: first.instance, rev: 0, hasMore: false, remaining: 0, changes: {}, rejected: [] });
+    expect((await sync(0)).changes.workouts).toBeUndefined();
+  });
+
   it('keeps the most recent version of a row', async () => {
     await sync(0, { workouts: [workout({ name: 'v2', updatedAt: T + 10 })] });
     const stale = await sync(0, { workouts: [workout({ name: 'v1', updatedAt: T + 5 })] });

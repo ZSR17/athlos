@@ -148,6 +148,15 @@ export async function markPushed(db: AthlosDb, snapshot: Snapshot, rejected: Syn
   });
 }
 
+// The server's data was replaced (another install, a copy of another server): its rows have other ids,
+// so everything local is dropped and downloaded again rather than mixed with the new data.
+async function resetLocalData(db: AthlosDb): Promise<void> {
+  await db.transaction('rw', [...TABLES.map((t) => db[t]), db.meta], async () => {
+    for (const t of TABLES) await db[t].clear();
+    await db.meta.clear();
+  });
+}
+
 let running: Promise<void> | null = null;
 let again = false;
 
@@ -159,8 +168,15 @@ async function run(db: AthlosDb): Promise<void> {
     let received = 0;
     for (;;) {
       const since = (await meta<number>(db, 'syncRev')) ?? 0;
+      const instance = await meta<string>(db, 'serverInstance');
       const { changes, snapshot } = first ? await collectChanges(db) : { changes: {}, snapshot: new Map() as Snapshot };
-      const res = await api<SyncResponse>('/sync', { method: 'POST', body: JSON.stringify({ since, changes }) });
+      const res = await api<SyncResponse>('/sync', { method: 'POST', body: JSON.stringify({ since, instance, changes }) });
+      if (res.instance !== instance) {
+        // First sync of this device: the server stored the changes, carry on. Otherwise start over.
+        if (instance !== undefined) await resetLocalData(db);
+        await db.meta.put({ key: 'serverInstance', value: res.instance });
+        if (instance !== undefined) continue;
+      }
       await applyChanges(db, res.changes);
       await markPushed(db, snapshot, res.rejected);
       await db.meta.put({ key: 'syncRev', value: res.rev });

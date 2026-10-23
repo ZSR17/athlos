@@ -121,6 +121,27 @@ describe('sync engine', () => {
     expect((await db.meta.get('syncRev'))!.value).toBe(9);
   });
 
+  it('starts over when the data behind the server was replaced', async () => {
+    let instance = 'db-1';
+    const calls = mockServer(() => ({ ...empty, instance }));
+    await syncNow({ db });
+    expect((await db.meta.get('serverInstance'))!.value).toBe('db-1');
+    await createWorkout('Jambes', db);
+
+    // Another database: the first answer stores nothing, local data is dropped and pulled again.
+    instance = 'db-2';
+    calls.length = 0;
+    await syncNow({ db });
+    expect(calls.map((c) => ({ since: c.since, instance: (c as { instance?: string }).instance }))).toEqual([
+      { since: 10, instance: 'db-1' },
+      { since: 0, instance: 'db-2' },
+    ]);
+    expect(calls[1]!.changes).toEqual({});
+    expect(await db.workouts.count()).toBe(0);
+    expect(await db.exercises.count()).toBe(0);
+    expect((await db.meta.get('serverInstance'))!.value).toBe('db-2');
+  });
+
   it('reports the server as unreachable when offline', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
     await createWorkout('Jambes', db);

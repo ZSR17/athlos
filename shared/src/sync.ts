@@ -95,10 +95,15 @@ export type SyncChanges = { [T in Exclude<PushTable, 'exercises'>]?: WireRow<T>[
 export const syncRequest = z.object({
   // Highest server revision this device has already applied (0 = nothing yet).
   since: z.number().int().nonnegative(),
+  // Database this device last synced with (`instance` of the previous response); absent the first time.
+  instance: z.string().max(100).optional(),
   changes: z.object(Object.fromEntries(PUSH_TABLES.map((t) => [t, z.array(z.unknown()).max(5000).optional()]))),
 });
 
 export interface SyncResponse {
+  // Id of the server's database. When it differs from the one the device sent, the data was replaced
+  // (another install, a copy of another server): nothing was stored, the device must start over.
+  instance: string;
   // Revision to send as `since` next time.
   rev: number;
   // More rows are waiting: call again with `since: rev` (and no changes).

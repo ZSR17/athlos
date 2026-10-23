@@ -9,7 +9,13 @@ export function syncRoutes(app: FastifyInstance, { db }: { db: Db }) {
   app.post('/sync', { bodyLimit: 8 * 1024 * 1024 }, async (request, reply) => {
     const body = syncRequest.safeParse(request.body);
     if (!body.success) return reply.code(400).send({ error: 'invalid_body' });
-    return sync(db, request.auth!.userId, body.data.since, body.data.changes as Record<string, unknown[] | undefined>);
+    return sync(
+      db,
+      request.auth!.userId,
+      body.data.since,
+      body.data.changes as Record<string, unknown[] | undefined>,
+      body.data.instance,
+    );
   });
 
   // Server-sent events: one `{"rev":N}` message whenever this user's data changes, so open apps

@@ -23,7 +23,7 @@ Les corps sont en JSON et validés par les schémas zod de `shared/`.
 
 | Route | Rôle |
 | --- | --- |
-| `POST /api/v1/sync` `{ since, changes }` | Envoie les lignes modifiées, renvoie `{ rev, changes, hasMore, remaining }`. |
+| `POST /api/v1/sync` `{ since, instance?, changes }` | Envoie les lignes modifiées, renvoie `{ instance, rev, changes, hasMore, remaining, rejected }`. Si `instance` (la base de la dernière synchro de l'appareil) n'est pas celle du serveur, rien n'est enregistré : l'appareil doit repartir de zéro. |
 | `GET /api/v1/events` | Flux SSE : `{"rev":N}` quand les données changent. |
 | `DELETE /api/v1/exercises/:id/override` | Supprime ta version d'un exercice de la bibliothèque. |
 

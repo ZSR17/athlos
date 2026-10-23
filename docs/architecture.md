@@ -44,6 +44,10 @@ sequenceDiagram
   suppression se propage à tous les appareils.
 - **Temps réel.** Les apps ouvertes écoutent `GET /api/v1/events` (Server-Sent Events, lu avec `fetch`
   pour pouvoir envoyer le jeton) et se synchronisent dès qu'un autre appareil a modifié quelque chose.
+- **Base remplacée.** Chaque base a un identifiant (`instance`), renvoyé à chaque synchro. Si le serveur
+  en donne un autre que celui de la dernière synchro (réinstallation, copie d'une autre base), l'app
+  oublie ses données locales et télécharge tout, au lieu de mélanger deux bases dont les lignes n'ont pas
+  les mêmes identifiants.
 - **Réseau absent.** Une erreur réseau ou une réponse 502 à 504 du reverse proxy est traitée comme
   « hors ligne » : les modifications restent en attente et repartent au retour du réseau.
 
