@@ -48,11 +48,11 @@ export async function deleteExercise(id: string, db: AthlosDb = defaultDb): Prom
 
 // Back to the library's version of a built-in exercise. Needs the server.
 export async function resetExercise(id: string): Promise<void> {
-  await syncNow({ force: true });
+  await syncNow();
   await api(`/exercises/${id}/override`, { method: 'DELETE' }).catch((err) => {
     if (!(err instanceof ApiError && err.status === 404)) throw err;
   });
-  await syncNow({ force: true });
+  await syncNow();
 }
 
 export class UploadError extends Error {}

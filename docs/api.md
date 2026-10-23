@@ -8,7 +8,6 @@ Les corps sont en JSON et validés par les schémas zod de `shared/`.
 | Route | Rôle |
 | --- | --- |
 | `GET /api/health` | État du serveur et version (public, utilisé par le healthcheck Docker). |
-| `GET /api/v1/network` | `{ location: 'home' \| 'remote' }`, d'après `HOME_CIDRS` (réglage « à la maison uniquement »). |
 | `GET /api/v1/storage` | Place occupée par la base et les médias. |
 
 ## Connexion et appareils

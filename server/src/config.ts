@@ -6,8 +6,6 @@ export interface Config {
   dataDir: string;
   // scrypt hash produced by `npm run hash-password`; login is refused while it is empty.
   passwordHash: string;
-  // Client networks considered "home" for the Wi-Fi only sync setting.
-  homeCidrs: string[];
   // Proxies whose X-Forwarded-For header is trusted (the reverse proxy in front of the app).
   trustProxy: string[];
   // Built web app (client/dist) served by this server in production; empty in development (Vite serves it).
@@ -29,7 +27,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     dataDir: path.resolve(env.DATA_DIR ?? './data'),
     // Quotes are kept by `docker run --env-file`; Compose removes them.
     passwordHash: (env.APP_PASSWORD_HASH ?? '').trim().replace(/^'(.*)'$|^"(.*)"$/, '$1$2'),
-    homeCidrs: list(env.HOME_CIDRS, ['192.168.1.0/24']),
     trustProxy: list(env.TRUST_PROXY, ['127.0.0.1/32', '172.16.0.0/12']),
     staticDir: env.STATIC_DIR ? path.resolve(env.STATIC_DIR) : '',
     ffmpegPath: env.FFMPEG_PATH ?? 'ffmpeg',

@@ -6,8 +6,6 @@ const LABELS: Record<SyncState, string> = {
   syncing: 'Synchronisation…',
   synced: 'Synchronisé',
   offline: 'Hors-ligne',
-  'paused-wifi': 'En attente du Wi-Fi',
-  'paused-session': 'Envoi en fin de séance',
   error: 'Erreur de synchro',
 };
 
@@ -16,8 +14,6 @@ const TONE: Record<SyncState, 'ok' | 'wait' | 'bad'> = {
   syncing: 'wait',
   synced: 'ok',
   offline: 'wait',
-  'paused-wifi': 'wait',
-  'paused-session': 'wait',
   error: 'bad',
 };
 
@@ -27,8 +23,6 @@ const SHORT: Record<SyncState, string> = {
   syncing: 'Synchro…',
   synced: 'Synchro',
   offline: 'Hors-ligne',
-  'paused-wifi': 'En attente',
-  'paused-session': 'En attente',
   error: 'Erreur',
 };
 

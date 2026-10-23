@@ -13,11 +13,6 @@ export interface LoginResponse {
   deviceId: string;
 }
 
-export interface NetworkResponse {
-  // "home" when the request comes from the home network, used by the "Wi-Fi only" sync setting.
-  location: 'home' | 'remote';
-}
-
 export interface HealthResponse {
   ok: boolean;
   version: string;

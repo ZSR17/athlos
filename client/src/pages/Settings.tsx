@@ -11,15 +11,13 @@ import { onColor, tooSimilar } from '../lib/color.ts';
 import { soundSettings, testBeep, useNow } from '../lib/feedback.ts';
 import { formatBytes } from '../lib/format.ts';
 import { type SyncState, enableSharedAppearance, syncNow, syncStatus } from '../sync/engine.ts';
-import { describeMode, syncSettings } from '../sync/settings.ts';
+import { syncSettings } from '../sync/settings.ts';
 
 const STATUS: Record<SyncState, string> = {
   idle: 'Pas encore synchronisé',
   syncing: 'Synchronisation…',
   synced: 'Synchronisé',
   offline: 'Serveur injoignable',
-  'paused-wifi': 'En attente du Wi-Fi maison',
-  'paused-session': 'Envoi à la fin de la séance',
   error: 'Erreur de synchronisation',
 };
 
@@ -79,10 +77,8 @@ function SoundSection() {
 }
 
 function SyncSection() {
-  const s = syncSettings.use();
   const status = syncStatus.use();
   const now = useNow(15_000);
-  const mode = describeMode(s);
   const busy = status.state === 'syncing';
   return (
     <section className="stack">
@@ -105,29 +101,9 @@ function SyncSection() {
             {status.rejected} élément{status.rejected > 1 ? 's' : ''} refusé{status.rejected > 1 ? 's' : ''} par le serveur : ils restent sur cet appareil.
           </p>
         )}
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => syncNow({ force: true })}>
+        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => syncNow()}>
           {busy ? 'Synchronisation…' : 'Synchroniser maintenant'}
         </button>
-      </div>
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <Toggle
-          on={s.wifiOnly}
-          onChange={() => syncSettings.set({ wifiOnly: !s.wifiOnly })}
-          title="Uniquement en Wi-Fi maison"
-          text="Rien en données mobiles (4G/5G)"
-        />
-        <Toggle
-          on={s.endOnly}
-          onChange={() => syncSettings.set({ endOnly: !s.endOnly })}
-          title="Seulement à la fin de la séance"
-          text="Aucun échange pendant l'entraînement"
-        />
-      </div>
-      <div className="card stack" style={{ gap: 4, border: '1px solid color-mix(in srgb, var(--accent) 35%, transparent)' }}>
-        <span style={{ fontWeight: 700, color: 'var(--accent-text)' }}>{mode.title}</span>
-        <span className="small muted" style={{ lineHeight: 1.45 }}>
-          {mode.text} « Synchroniser maintenant » fonctionne dans tous les cas.
-        </span>
       </div>
     </section>
   );

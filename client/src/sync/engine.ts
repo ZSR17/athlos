@@ -1,13 +1,12 @@
-import type { Appearance, NetworkResponse, PushTable, SyncChanges, SyncResponse, WireExercise } from '@athlos/shared';
+import type { Appearance, PushTable, SyncChanges, SyncResponse, WireExercise } from '@athlos/shared';
 import { liveQuery } from 'dexie';
 import { type AthlosDb, type LocalExercise, db as defaultDb } from '../db/db.ts';
-import { getLive } from '../db/sessions.ts';
 import { ApiError, api, getToken } from '../lib/api.ts';
 import { applySharedAppearance, getAppearance, onAppearanceEdited } from '../lib/appearance.ts';
 import { createStore } from '../lib/store.ts';
 import { syncSettings } from './settings.ts';
 
-export type SyncState = 'idle' | 'syncing' | 'synced' | 'offline' | 'paused-wifi' | 'paused-session' | 'error';
+export type SyncState = 'idle' | 'syncing' | 'synced' | 'offline' | 'error';
 
 export const syncStatus = createStore<{
   state: SyncState;
@@ -149,34 +148,11 @@ export async function markPushed(db: AthlosDb, snapshot: Snapshot, rejected: Syn
   });
 }
 
-let networkCache: { at: number; location: NetworkResponse['location'] } | null = null;
-async function atHome(): Promise<boolean> {
-  if (!networkCache || Date.now() - networkCache.at > 60_000) {
-    networkCache = { at: Date.now(), location: (await api<NetworkResponse>('/network')).location };
-  }
-  return networkCache.location === 'home';
-}
-
-// Why automatic sync must wait right now, if it must (manual sync ignores this).
-async function pausedReason(db: AthlosDb): Promise<SyncState | null> {
-  const s = syncSettings.get();
-  if (s.endOnly && (await getLive(db))) return 'paused-session';
-  if (s.wifiOnly && !(await atHome())) return 'paused-wifi';
-  return null;
-}
-
 let running: Promise<void> | null = null;
 let again = false;
 
-async function run(db: AthlosDb, force: boolean): Promise<void> {
+async function run(db: AthlosDb): Promise<void> {
   try {
-    if (!force) {
-      const paused = await pausedReason(db);
-      if (paused) {
-        syncStatus.set({ state: paused, pending: await countPending(db) });
-        return;
-      }
-    }
     syncStatus.set({ state: 'syncing' });
     let rejected = 0;
     let first = true;
@@ -202,13 +178,13 @@ async function run(db: AthlosDb, force: boolean): Promise<void> {
   }
 }
 
-export function syncNow({ force = false, db = defaultDb }: { force?: boolean; db?: AthlosDb } = {}): Promise<void> {
+export function syncNow({ db = defaultDb }: { db?: AthlosDb } = {}): Promise<void> {
   if (!getToken()) return Promise.resolve();
   if (running) {
     again = true;
     return running;
   }
-  running = run(db, force).finally(() => {
+  running = run(db).finally(() => {
     running = null;
     if (again) {
       again = false;
@@ -254,7 +230,7 @@ export function startSync(db: AthlosDb = defaultDb): () => void {
   const connect = async () => {
     let backoff = 5_000;
     while (!stopped && document.visibilityState === 'visible') {
-      if (!navigator.onLine || (await pausedReason(db).catch(() => 'offline'))) {
+      if (!navigator.onLine) {
         await new Promise((r) => setTimeout(r, 30_000));
         continue;
       }
@@ -293,10 +269,7 @@ export function startSync(db: AthlosDb = defaultDb): () => void {
     if (!syncSettings.get().shareAppearance) return;
     void db.meta.put({ key: 'appearanceDirtyAt', value: Date.now() }).then(() => requestSync());
   });
-  const stopSettings = syncSettings.subscribe(() => {
-    networkCache = null;
-    requestSync(300);
-  });
+  const stopSettings = syncSettings.subscribe(() => requestSync(300));
   // Safety net when the event stream is not available.
   const poll = setInterval(() => {
     if (document.visibilityState === 'visible' && !streaming) void syncNow();

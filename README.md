@@ -45,7 +45,7 @@ Pas de compte, pas de publicité, pas de service tiers : tes données restent ch
 **Multi-appareils**
 - Dans n'importe quel navigateur récent, avec une mise en page adaptée aux fenêtres étroites comme aux
   grands écrans.
-- Synchronisation en temps réel entre les appareils, ou seulement en Wi-Fi, ou seulement en fin de séance.
+- Synchronisation en temps réel entre les appareils.
 - Couleurs personnalisables, par appareil ou partagées.
 - Export et import de toutes tes données en JSON.
 

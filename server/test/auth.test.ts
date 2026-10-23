@@ -42,7 +42,7 @@ describe('auth', () => {
   });
 
   it('rejects API calls without a token', async () => {
-    const res = await ctx.app.inject({ method: 'GET', url: '/api/v1/network' });
+    const res = await ctx.app.inject({ method: 'GET', url: '/api/v1/devices' });
     expect(res.statusCode).toBe(401);
   });
 
@@ -80,7 +80,7 @@ describe('auth', () => {
     expect(res.statusCode).toBe(200);
     const phoneCall = await ctx.app.inject({
       method: 'GET',
-      url: '/api/v1/network',
+      url: '/api/v1/devices',
       headers: { authorization: `Bearer ${phone.token}` },
     });
     expect(phoneCall.statusCode).toBe(401);

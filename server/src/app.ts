@@ -2,12 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
-import { API_PREFIX, type HealthResponse, type NetworkResponse } from '@athlos/shared';
+import { API_PREFIX, type HealthResponse } from '@athlos/shared';
 import Fastify, { type FastifyServerOptions } from 'fastify';
 import { authHook } from './auth.ts';
 import type { Config } from './config.ts';
 import type { Db } from './db/index.ts';
-import { ipInCidrs } from './lib/ip.ts';
 import { mediaDir, mediaRelPath } from './lib/media.ts';
 import { authRoutes } from './routes/auth.ts';
 import { exerciseRoutes } from './routes/exercises.ts';
@@ -74,9 +73,6 @@ export async function buildApp({ config, db, ownerId, logger = false }: AppDeps)
       exerciseRoutes(api, { db });
       mediaRoutes(api, { db, config });
       syncRoutes(api, { db });
-      api.get('/network', async (request): Promise<NetworkResponse> => ({
-        location: ipInCidrs(request.ip, config.homeCidrs) ? 'home' : 'remote',
-      }));
     },
     { prefix: API_PREFIX },
   );

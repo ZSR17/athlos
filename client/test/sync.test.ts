@@ -29,12 +29,11 @@ const squat: LocalExercise = {
 };
 
 // Minimal stand-in for the server: records requests, answers with a canned response.
-function mockServer(respond: (body: { since: number; changes: Record<string, unknown[]> }) => unknown, location = 'home') {
+function mockServer(respond: (body: { since: number; changes: Record<string, unknown[]> }) => unknown) {
   const calls: { since: number; changes: Record<string, unknown[]> }[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.endsWith('/network')) return new Response(JSON.stringify({ location }));
       const body = JSON.parse(String(init?.body));
       calls.push(body);
       return new Response(JSON.stringify(respond(body)));
@@ -49,7 +48,7 @@ beforeEach(async () => {
   db = new AthlosDb(`sync-${n++}`);
   await db.exercises.add(squat);
   localStorage.setItem('athlos.token', 'test-token');
-  syncSettings.set({ wifiOnly: false, endOnly: false, shareAppearance: false });
+  syncSettings.set({ shareAppearance: false });
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -65,14 +64,14 @@ describe('sync engine', () => {
     expect(changes.workoutItems).toHaveLength(1);
 
     const calls = mockServer(() => empty);
-    await syncNow({ db, force: true });
+    await syncNow({ db });
     expect(calls[0]!.since).toBe(0);
     expect((await db.workouts.get(w))!.dirty).toBe(0);
     expect((await db.meta.get('syncRev'))!.value).toBe(10);
     expect(syncStatus.get()).toMatchObject({ state: 'synced', pending: 0 });
 
     // Next sync only pulls, from the stored revision.
-    await syncNow({ db, force: true });
+    await syncNow({ db });
     expect(calls[1]).toEqual({ since: 10, changes: {} });
   });
 
@@ -117,40 +116,20 @@ describe('sync engine', () => {
 
   it('follows the pages announced by the server', async () => {
     const calls = mockServer((b) => (b.since === 0 ? { ...empty, rev: 5, hasMore: true } : { ...empty, rev: 9 }));
-    await syncNow({ db, force: true });
+    await syncNow({ db });
     expect(calls.map((c) => c.since)).toEqual([0, 5]);
     expect((await db.meta.get('syncRev'))!.value).toBe(9);
-  });
-
-  it('waits for the end of the session or for home Wi-Fi when asked to', async () => {
-    const w = await createWorkout('Jambes', db);
-    await addItem(w, squat, db);
-    await startSession(w, db);
-    syncSettings.set({ endOnly: true });
-    let calls = mockServer(() => empty);
-    await syncNow({ db });
-    expect(calls).toHaveLength(0);
-    expect(syncStatus.get().state).toBe('paused-session');
-    // A manual sync goes through anyway.
-    await syncNow({ db, force: true });
-    expect(calls).toHaveLength(1);
-
-    syncSettings.set({ endOnly: false, wifiOnly: true });
-    calls = mockServer(() => empty, 'remote');
-    await syncNow({ db });
-    expect(calls).toHaveLength(0);
-    expect(syncStatus.get().state).toBe('paused-wifi');
   });
 
   it('reports the server as unreachable when offline', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
     await createWorkout('Jambes', db);
-    await syncNow({ db, force: true });
+    await syncNow({ db });
     expect(syncStatus.get()).toMatchObject({ state: 'offline', pending: 1 });
 
     // Same when the reverse proxy is up but the server behind it is not.
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 502 })));
-    await syncNow({ db, force: true });
+    await syncNow({ db });
     expect(syncStatus.get().state).toBe('offline');
   });
 
@@ -163,7 +142,7 @@ describe('sync engine', () => {
         ? { ...empty, rev: 5, hasMore: true, remaining: 2, changes: { workouts: [workout('a'), workout('b')] } }
         : { ...empty, rev: 9, remaining: 0, changes: { workouts: [workout('c'), workout('d')] } },
     );
-    await syncNow({ db, force: true });
+    await syncNow({ db });
     stop();
     expect(seen).toContainEqual({ done: 2, total: 4 });
     expect(syncStatus.get().download).toBeNull();

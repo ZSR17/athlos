@@ -22,7 +22,7 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
             : err.status === 429
               ? 'Trop de tentatives, réessaie dans une minute.'
               : 'Le serveur a refusé la connexion.'
-          : "Impossible de joindre le serveur. Vérifie que tu es connecté à la maison ou en données mobiles.",
+          : "Impossible de joindre le serveur. Vérifie ta connexion.",
       );
     } finally {
       setBusy(false);

@@ -109,7 +109,6 @@ export function LiveSession() {
   };
   const finish = async () => {
     const id = await finishSession();
-    // With "sync at the end of the session" this is the moment everything goes.
     requestSync(0);
     navigate(id ? `/historique/${id}?fin=1` : '/');
   };

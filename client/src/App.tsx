@@ -9,24 +9,20 @@ import { Home } from './pages/Home.tsx';
 import { Library } from './pages/Library.tsx';
 import { LiveSession } from './pages/LiveSession.tsx';
 import { Login } from './pages/Login.tsx';
-import { Onboarding } from './pages/Onboarding.tsx';
 import { SessionDetail } from './pages/SessionDetail.tsx';
 import { Settings } from './pages/Settings.tsx';
 import { WorkoutEditor } from './pages/WorkoutEditor.tsx';
 import { startSync } from './sync/engine.ts';
-import { syncSettings } from './sync/settings.ts';
 
 export function App() {
   const [authed, setAuthed] = useState(() => getToken() !== null);
-  const { onboarded } = syncSettings.use();
 
   useEffect(() => onUnauthorized(() => setAuthed(false)), []);
 
   // Sync runs for as long as the device is logged in; offline it just waits.
-  useEffect(() => (authed && onboarded ? startSync() : undefined), [authed, onboarded]);
+  useEffect(() => (authed ? startSync() : undefined), [authed]);
 
   if (!authed) return <Login onLoggedIn={() => setAuthed(true)} />;
-  if (!onboarded) return <Onboarding />;
 
   return (
     <BrowserRouter>

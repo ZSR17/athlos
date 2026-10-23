@@ -44,9 +44,6 @@ sequenceDiagram
   suppression se propage à tous les appareils.
 - **Temps réel.** Les apps ouvertes écoutent `GET /api/v1/events` (Server-Sent Events, lu avec `fetch`
   pour pouvoir envoyer le jeton) et se synchronisent dès qu'un autre appareil a modifié quelque chose.
-- **Modes.** Synchro continue par défaut, ou seulement à la maison (le serveur indique si l'appareil est sur
-  le réseau local, d'après `HOME_CIDRS`), ou seulement à la fin de la séance, pour économiser les données
-  mobiles.
 - **Réseau absent.** Une erreur réseau ou une réponse 502 à 504 du reverse proxy est traitée comme
   « hors ligne » : les modifications restent en attente et repartent au retour du réseau.
 

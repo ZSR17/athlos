@@ -6,8 +6,8 @@ import type { Db } from './db/index.ts';
 import { exerciseOverrides, exercises, media } from './db/schema.ts';
 import { mediaDir, mediaRelPath } from './lib/media.ts';
 
-// An upload is attached to its exercise by the next sync, which can wait (Wi-Fi only setting):
-// recent files are kept even when nothing uses them yet.
+// An upload is attached to its exercise by the next sync, which can wait (device offline): recent
+// files are kept even when nothing uses them yet.
 export const CLEANUP_GRACE_MS = 7 * 24 * 3600 * 1000;
 
 // Deletes media files that no exercise (custom, built-in, or a user's version of one) uses anymore.

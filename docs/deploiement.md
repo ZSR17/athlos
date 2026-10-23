@@ -34,8 +34,6 @@ services:
     container_name: athlos
     restart: unless-stopped
     env_file: env/athlos.env
-    environment:
-      HOME_CIDRS: 192.168.1.0/24       # ton réseau local
     volumes:
       - ./data:/data                   # base, médias, sauvegardes
     tmpfs:
@@ -64,7 +62,7 @@ N'importe quel reverse proxy HTTPS convient, avec trois réglages :
   passe, et une redirection casserait la synchronisation.
 
 Si le proxy n'est pas sur la même machine ou le même réseau Docker, ajoute son adresse à `TRUST_PROXY` :
-le serveur a besoin de la vraie adresse de l'appareil pour savoir s'il est « à la maison ».
+le serveur a besoin de la vraie adresse de l'appareil pour limiter les essais de connexion.
 
 ## Configuration
 
@@ -73,7 +71,6 @@ Variables d'environnement, dans `env/athlos.env` ou dans `compose.yml` :
 | Variable | Défaut | Rôle |
 | --- | --- | --- |
 | `APP_PASSWORD_HASH` | *(vide)* | Empreinte scrypt du mot de passe. **Obligatoire** : sans elle, toute connexion est refusée. Entre apostrophes dans un fichier lu par Compose, sinon chaque `$` est pris pour une variable. |
-| `HOME_CIDRS` | `192.168.1.0/24` | Réseaux considérés comme « à la maison » (réglage de synchro « à la maison uniquement »). Plusieurs valeurs séparées par des virgules. |
 | `TRUST_PROXY` | `127.0.0.1/32,172.16.0.0/12` | Proxys dont l'en-tête `X-Forwarded-For` est accepté. |
 | `LOG_LEVEL` | `info` | Niveau des logs (`debug`, `info`, `warn`, `error`). |
 | `PORT`, `HOST` | `3000`, `0.0.0.0` | Écoute du serveur. |
@@ -82,7 +79,7 @@ Variables d'environnement, dans `env/athlos.env` ou dans `compose.yml` :
 
 ## Ouvrir l'app
 
-Ouvrir l'adresse du serveur dans un navigateur récent. Au premier lancement, l'app demande le mot de passe, puis le mode de synchronisation.
+Ouvrir l'adresse du serveur dans un navigateur récent. Au premier lancement, l'app demande le mot de passe.
 
 ## Sauvegardes
 
