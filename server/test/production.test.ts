@@ -9,12 +9,11 @@ afterEach(async () => {
   await ctx.cleanup();
 });
 
-// A fake client build: shell, service worker and a hashed asset.
+// A fake client build: shell and a hashed asset.
 function fakeDist(): string {
   const dir = tempDir();
   fs.mkdirSync(path.join(dir, 'assets'));
   fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>Athlos</title>');
-  fs.writeFileSync(path.join(dir, 'sw.js'), 'self.x=1');
   fs.writeFileSync(path.join(dir, 'assets', 'index-abc123.js'), 'console.log(1)');
   return dir;
 }
@@ -31,7 +30,6 @@ describe('production', () => {
     expect(route.statusCode).toBe(200);
     expect(route.body).toContain('Athlos');
 
-    expect((await ctx.app.inject({ method: 'GET', url: '/sw.js' })).headers['cache-control']).toBe('no-cache');
     expect((await ctx.app.inject({ method: 'GET', url: '/assets/index-abc123.js' })).headers['cache-control']).toContain('immutable');
 
     // API and media misses stay JSON 404s, never the app shell.

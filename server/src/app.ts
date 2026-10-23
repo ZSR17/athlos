@@ -43,14 +43,12 @@ export async function buildApp({ config, db, ownerId, logger = false }: AppDeps)
   });
 
   if (config.staticDir) {
-    // The app itself. Its shell must always be revalidated so updates show up; hashed assets never
-    // change. sw.js only removes the service worker of the former installable version.
+    // The app itself. Its shell must always be revalidated so updates show up; hashed assets never change.
     await app.register(fastifyStatic, {
       root: config.staticDir,
       decorateReply: false,
       setHeaders: (res, file) => {
-        const name = path.basename(file);
-        if (name === 'index.html' || name === 'sw.js') {
+        if (path.basename(file) === 'index.html') {
           res.header('cache-control', 'no-cache');
         } else if (file.includes(`${path.sep}assets${path.sep}`)) {
           res.header('cache-control', 'public, max-age=31536000, immutable');

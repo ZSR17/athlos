@@ -10,8 +10,6 @@ import { App } from './App.tsx';
 import { applyAppearance } from './lib/appearance.ts';
 
 applyAppearance();
-// Athlos used to be an installable app with a service worker: remove it where it is still there.
-void navigator.serviceWorker?.getRegistrations().then((registrations) => registrations.forEach((r) => void r.unregister()));
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
