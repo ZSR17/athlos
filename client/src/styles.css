@@ -557,6 +557,21 @@ h3 {
 .media .frame-b {
   animation: frame-b 2.2s infinite ease-in-out;
 }
+/* Movement shown next to a hovered exercise of the picker (above the sheet it is in). */
+.exercise-preview {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.45);
+  pointer-events: none;
+}
 @keyframes frame-b {
   0%,
   38% {

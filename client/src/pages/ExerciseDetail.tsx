@@ -1,7 +1,7 @@
 import { EQUIPMENT_LABELS, EXERCISE_TYPES, MUSCLES } from '@athlos/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { ExerciseMedia } from '../components/ExerciseMedia.tsx';
 import { Icon } from '../components/Icon.tsx';
@@ -15,6 +15,7 @@ const LEVELS: Record<string, string> = { beginner: 'Débutant', intermediate: 'I
 export function ExerciseDetail() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const exercise = useLiveQuery(() => db.exercises.get(id), [id]);
   const workouts = useLiveQuery(() => db.workouts.orderBy('position').filter((w) => !w.deleted).toArray(), []);
   const [bigMap, setBigMap] = useState(false);
@@ -33,6 +34,12 @@ export function ExerciseDetail() {
       <ExerciseMedia urls={exercise.mediaUrls} name={exercise.name} className="hero-media">
         <Link
           to="/exercices"
+          // Back where the exercise was opened from (a workout, the history…); the library otherwise.
+          onClick={(e) => {
+            if (location.key === 'default') return;
+            e.preventDefault();
+            navigate(-1);
+          }}
           className="icon-btn"
           aria-label="Retour"
           style={{ position: 'absolute', top: 14, left: 16, background: 'rgb(14 16 18 / .7)', color: '#fff' }}

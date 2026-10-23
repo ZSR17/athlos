@@ -1,10 +1,11 @@
 import { EQUIPMENT_LABELS, EXERCISE_TYPES, MUSCLE_GROUPS, MUSCLES, type MuscleId } from '@athlos/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { type LocalExercise, db } from '../db/db.ts';
 import { syncStatus } from '../sync/engine.ts';
-import { thumbUrl } from './ExerciseMedia.tsx';
+import { ExerciseMedia, thumbUrl } from './ExerciseMedia.tsx';
 import { Icon } from './Icon.tsx';
 import { Progress } from './Progress.tsx';
 
@@ -18,6 +19,49 @@ function muscleLine(e: LocalExercise): string {
 
 function normalize(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+const PREVIEW_W = 300;
+const PREVIEW_H = 270;
+
+// Hovering a row with the mouse while picking shows the movement next to it (after a short pause, so
+// sweeping the list does not flash previews). Hidden when the list scrolls.
+function usePreview() {
+  const [preview, setPreview] = useState<{ exercise: LocalExercise; top: number; left: number } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const hide = () => {
+    clearTimeout(timer.current);
+    setPreview(null);
+  };
+  useEffect(() => {
+    if (!preview) return;
+    addEventListener('scroll', hide, true);
+    return () => removeEventListener('scroll', hide, true);
+  }, [preview]);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const show = (exercise: LocalExercise, e: PointerEvent<HTMLElement>) => {
+    if (e.pointerType !== 'mouse') return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const left = r.right + 12 + PREVIEW_W <= innerWidth ? r.right + 12 : r.left - 12 - PREVIEW_W;
+    if (left < 0) return;
+    const top = Math.min(Math.max(8, r.top + r.height / 2 - PREVIEW_H / 2), innerHeight - PREVIEW_H - 8);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setPreview({ exercise, top, left }), 250);
+  };
+
+  const card =
+    preview &&
+    createPortal(
+      <div className="exercise-preview" style={{ top: preview.top, left: preview.left, width: PREVIEW_W }} aria-hidden="true">
+        <ExerciseMedia urls={preview.exercise.mediaUrls} name={preview.exercise.name} style={{ height: PREVIEW_H - 46 }} />
+        <span className="ellipsis" style={{ fontWeight: 700, padding: '0 12px' }}>
+          {preview.exercise.name}
+        </span>
+      </div>,
+      document.body,
+    );
+  return { show, hide, card };
 }
 
 function useExercises(): LocalExercise[] | undefined {
@@ -37,6 +81,7 @@ export function ExerciseList({ onSelect }: { onSelect?: (e: LocalExercise) => vo
   const [group, setGroup] = useState<string>('all');
   const [shown, setShown] = useState(PAGE);
   const sentinel = useRef<HTMLDivElement>(null);
+  const preview = usePreview();
 
   const filtered = useMemo(() => {
     if (!all) return [];
@@ -111,7 +156,14 @@ export function ExerciseList({ onSelect }: { onSelect?: (e: LocalExercise) => vo
             </>
           );
           return onSelect ? (
-            <button key={e.id} type="button" className="list-item" onClick={() => onSelect(e)}>
+            <button
+              key={e.id}
+              type="button"
+              className="list-item"
+              onClick={() => (preview.hide(), onSelect(e))}
+              onPointerEnter={(ev) => preview.show(e, ev)}
+              onPointerLeave={preview.hide}
+            >
               {content}
             </button>
           ) : (
@@ -122,6 +174,7 @@ export function ExerciseList({ onSelect }: { onSelect?: (e: LocalExercise) => vo
         })}
         {shown < filtered.length && <div ref={sentinel} style={{ height: 1 }} />}
       </div>
+      {preview.card}
     </div>
   );
 }
