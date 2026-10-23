@@ -11,6 +11,7 @@ export function Stepper({
   parse,
   onChange,
   inputMode = 'decimal',
+  disabled = false,
 }: {
   label: string;
   unit: string;
@@ -21,18 +22,19 @@ export function Stepper({
   parse: (s: string) => number | null;
   onChange: (v: number) => void;
   inputMode?: 'decimal' | 'numeric' | 'text';
+  disabled?: boolean;
 }) {
   const v = value ?? 0;
   return (
     <div className="stepper">
-      <button type="button" onClick={() => onChange(Math.max(min, v - step))} aria-label={`${label} : moins`}>
+      <button type="button" disabled={disabled} onClick={() => onChange(Math.max(min, v - step))} aria-label={`${label} : moins`}>
         −
       </button>
       <span className="stepper-value">
-        <ValueInput value={value} format={format} parse={parse} onCommit={onChange} label={label} inputMode={inputMode} />
+        <ValueInput value={value} format={format} parse={parse} onCommit={onChange} label={label} inputMode={inputMode} disabled={disabled} />
         <span className="small muted">{unit}</span>
       </span>
-      <button type="button" onClick={() => onChange(v + step)} aria-label={`${label} : plus`}>
+      <button type="button" disabled={disabled} onClick={() => onChange(v + step)} aria-label={`${label} : plus`}>
         +
       </button>
     </div>

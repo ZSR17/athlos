@@ -10,6 +10,7 @@ export function ValueInput({
   label,
   inputMode = 'decimal',
   className = 'cell-input',
+  disabled = false,
 }: {
   value: number | undefined;
   format: (v: number | undefined) => string;
@@ -18,6 +19,7 @@ export function ValueInput({
   label: string;
   inputMode?: 'decimal' | 'numeric' | 'text';
   className?: string;
+  disabled?: boolean;
 }) {
   const [text, setText] = useState(format(value));
   useEffect(() => setText(format(value)), [value, format]);
@@ -33,6 +35,7 @@ export function ValueInput({
       className={className}
       aria-label={label}
       inputMode={inputMode}
+      disabled={disabled}
       value={text}
       onChange={(e) => setText(e.target.value)}
       onFocus={(e) => e.target.select()}

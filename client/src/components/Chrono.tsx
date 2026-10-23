@@ -6,7 +6,16 @@ import { Ring } from './Ring.tsx';
 // Countdown to the set's duration, or a free stopwatch. Reports the elapsed seconds to the parent
 // while running so "Valider" always records what was actually held. Until it starts, the countdown
 // follows `targetS` (the value shown for the set, adjustable with −/+); then it stays fixed.
-export function Chrono({ targetS: shownTargetS, onChange }: { targetS: number | undefined; onChange: (seconds: number) => void }) {
+// `onStartedChange` reports whether it has been started (running or paused): the duration is then its own.
+export function Chrono({
+  targetS: shownTargetS,
+  onChange,
+  onStartedChange,
+}: {
+  targetS: number | undefined;
+  onChange: (seconds: number) => void;
+  onStartedChange: (started: boolean) => void;
+}) {
   const [chosenMode, setMode] = useState<'countdown' | 'stopwatch' | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [accMs, setAccMs] = useState(0);
@@ -22,6 +31,8 @@ export function Chrono({ targetS: shownTargetS, onChange }: { targetS: number | 
   const targetS = started ? fixedS : shownTargetS;
   const mode = chosenMode ?? (targetS ? 'countdown' : 'stopwatch');
   const countdown = mode === 'countdown' && !!targetS;
+
+  useEffect(() => onStartedChange(started), [started, onStartedChange]);
   const shownS = countdown ? Math.max(0, targetS - elapsedS) : elapsedS;
   const progress = countdown ? Math.min(1, elapsedMs / (targetS * 1000)) : (elapsedMs % 60000) / 60000;
 

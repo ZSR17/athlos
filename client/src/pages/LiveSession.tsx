@@ -69,6 +69,8 @@ export function LiveSession() {
   }, [draftKey, previous]);
   const setField = useCallback((key: keyof SetValues, v: number) => setDraft((d) => (d[key] === v ? d : { ...d, [key]: v })), []);
   const setDuration = useCallback((s: number) => setField('durationS', s), [setField]);
+  // While the chrono runs or is paused, it owns the duration: the Temps field is locked.
+  const [chronoStarted, setChronoStarted] = useState(false);
 
   const setNumber = (set: number) => (item ? workingNumber(item, set) : set + 1);
 
@@ -230,7 +232,7 @@ export function LiveSession() {
               </button>
             </div>
 
-            {metrics.includes('duration') && <Chrono key={draftKey} targetS={draft.durationS} onChange={setDuration} />}
+            {metrics.includes('duration') && <Chrono key={draftKey} targetS={draft.durationS} onChange={setDuration} onStartedChange={setChronoStarted} />}
 
             <div className="steppers">
               {metrics.includes('weight') && (
@@ -251,7 +253,17 @@ export function LiveSession() {
                 <Stepper label="Distance" unit="km" value={draft.distanceM} step={100} format={formatKm} parse={parseKm} onChange={(v) => setField('distanceM', v)} />
               )}
               {metrics.includes('duration') && (
-                <Stepper label="Temps" unit="temps" value={draft.durationS} step={1} format={formatDuration} parse={parseDuration} onChange={(v) => setField('durationS', v)} inputMode="numeric" />
+                <Stepper
+                  label="Temps"
+                  unit="temps"
+                  value={draft.durationS}
+                  step={1}
+                  format={formatDuration}
+                  parse={parseDuration}
+                  onChange={(v) => setField('durationS', v)}
+                  inputMode="numeric"
+                  disabled={chronoStarted}
+                />
               )}
             </div>
 
