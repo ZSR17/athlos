@@ -1,4 +1,5 @@
 import { type PlanItem, type SetValues, type Step, buildSteps, nextOpenStep, restAfter, stepKey } from '../lib/session.ts';
+import { updateAll } from '../lib/targets.ts';
 import { type LocalSession, type LocalSetLog, type AthlosDb, db as defaultDb } from './db.ts';
 import { liveItems } from './workouts.ts';
 
@@ -138,11 +139,36 @@ export async function finishSession(db: AthlosDb = defaultDb): Promise<string | 
     await discardSession(db);
     return null;
   }
-  await db.transaction('rw', db.sessions, db.meta, async () => {
+  await db.transaction('rw', db.sessions, db.workoutItems, db.meta, async () => {
     await db.sessions.update(live.sessionId, { endedAt: Date.now(), ...touched() });
+    await updatePlan(db, logs);
     await db.meta.delete(LIVE);
   });
   return live.sessionId;
+}
+
+const valuesDone = (l: LocalSetLog): SetValues =>
+  Object.fromEntries((['reps', 'weightG', 'durationS', 'distanceM'] as const).filter((k) => l[k] != null).map((k) => [k, l[k]]));
+
+// The workout's plan takes the values just done, so editing it shows them. Only planned sets change
+// (extra sets are not added); in simple mode (identical sets) the first working set done is the model.
+async function updatePlan(db: AthlosDb, logs: LocalSetLog[]) {
+  for (const itemId of new Set(logs.map((l) => l.workoutItemId))) {
+    const item = itemId ? await db.workoutItems.get(itemId) : undefined;
+    if (!item || item.deleted) continue;
+    const itemLogs = logs.filter((l) => l.workoutItemId === itemId && l.setIndex < item.targets.length).sort((a, b) => a.setIndex - b.setIndex);
+    let targets = item.targets;
+    if (item.mode === 'simple') {
+      const model = itemLogs.find((l) => l.kind !== 'warmup');
+      if (model) targets = updateAll(targets, valuesDone(model));
+    } else {
+      targets = targets.map((t, i) => {
+        const log = itemLogs.find((l) => l.setIndex === i);
+        return log ? { ...t, ...valuesDone(log) } : t;
+      });
+    }
+    if (JSON.stringify(targets) !== JSON.stringify(item.targets)) await db.workoutItems.update(item.id, { targets, ...touched() });
+  }
 }
 
 export async function discardSession(db: AthlosDb = defaultDb) {

@@ -136,6 +136,31 @@ describe('session flow', () => {
     expect(prev.get(1)).toMatchObject({ reps: 7, weightG: 82500 });
   });
 
+  it('updates the workout plan with the values done', async () => {
+    const w = await createWorkout('Jambes', db);
+    await addItem(w, squat, db);
+    await addItem(w, plank, db);
+    const [simple, perSet] = await liveItems(db, w);
+    await updateItem(simple!.id, { mode: 'simple', targets: sets(3).map((t) => ({ ...t, weightG: 80000 })) }, db);
+    await updateItem(perSet!.id, { mode: 'per_set', targets: [30, 30].map((d) => ({ kind: 'normal' as const, durationS: d, restS: 60 })) }, db);
+
+    await startSession(w, db);
+    let live = (await getLive(db))!;
+    await logSet(live, 0, { reps: 10, weightG: 82500 }, db);
+    live = (await getLive(db))!;
+    await logSet(live, 1, { reps: 9, weightG: 85000 }, db);
+    live = (await getLive(db))!;
+    await logSet(live, 3, { durationS: 45 }, db);
+    await finishSession(db);
+
+    const [a, b] = await liveItems(db, w);
+    // Simple mode: the first set done is the model of all sets, rest unchanged.
+    expect(a!.targets).toEqual(Array.from({ length: 3 }, () => ({ kind: 'normal', reps: 10, weightG: 82500, restS: 90 })));
+    // Per set: only the sets done change.
+    expect(b!.targets.map((t) => t.durationS)).toEqual([45, 30]);
+    expect(b!.dirty).toBe(1);
+  });
+
   it('discards a session without any set', async () => {
     const w = await createWorkout('Vide', db);
     await addItem(w, squat, db);
