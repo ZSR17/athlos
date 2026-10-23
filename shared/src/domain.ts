@@ -7,10 +7,10 @@ export type Sport = (typeof SPORTS)[number];
 export type Metric = 'reps' | 'weight' | 'duration' | 'distance';
 
 export const EXERCISE_TYPES = {
-  weight_reps: { label: 'Poids et Réps', metrics: ['reps', 'weight'] },
+  weight_reps: { label: 'Poids et Réps', metrics: ['weight', 'reps'] },
   bw_reps: { label: 'Réps poids du corps', metrics: ['reps'] },
-  weighted_bw: { label: 'Poids du corps lesté', metrics: ['reps', 'weight'] },
-  assisted_bw: { label: 'Poids du corps assisté', metrics: ['reps', 'weight'] },
+  weighted_bw: { label: 'Poids du corps lesté', metrics: ['weight', 'reps'] },
+  assisted_bw: { label: 'Poids du corps assisté', metrics: ['weight', 'reps'] },
   duration: { label: 'Durée', metrics: ['duration'] },
   duration_weight: { label: 'Durée et poids', metrics: ['weight', 'duration'] },
   distance_duration: { label: 'Distance et durée', metrics: ['duration', 'distance'] },
