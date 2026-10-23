@@ -13,7 +13,8 @@ export function Chrono({ targetS, onChange }: { targetS: number | undefined; onC
   const finished = useRef(false);
 
   const running = startedAt !== null;
-  const elapsedMs = accMs + (running ? now - startedAt : 0);
+  // `now` ticks every 200 ms and can lag the moment the chrono started: never count negative time.
+  const elapsedMs = accMs + (running ? Math.max(0, now - startedAt) : 0);
   const elapsedS = Math.floor(elapsedMs / 1000);
   const countdown = mode === 'countdown' && !!targetS;
   const shownS = countdown ? Math.max(0, targetS - elapsedS) : elapsedS;
@@ -36,7 +37,7 @@ export function Chrono({ targetS, onChange }: { targetS: number | undefined; onC
   const toggle = () => {
     unlockAudio();
     if (running) {
-      setAccMs(elapsedMs);
+      setAccMs(accMs + Date.now() - startedAt);
       setStartedAt(null);
     } else {
       finished.current = false;
