@@ -291,15 +291,15 @@ export function ExerciseEditor() {
               <Icon name="plus" size={24} />
             </button>
           )}
+          {removed && (
+            <div className="stack" role="status" style={{ gap: 6, alignItems: 'flex-start' }}>
+              <span className="small muted">{removed.urls[0]!.endsWith('.mp4') ? 'Vidéo retirée.' : 'Photo retirée.'}</span>
+              <button type="button" className="btn" onClick={undoRemove}>
+                Annuler
+              </button>
+            </div>
+          )}
         </div>
-        {removed && (
-          <div className="row" role="status" style={{ gap: 10 }}>
-            <span className="small muted grow">{removed.urls[0]!.endsWith('.mp4') ? 'Vidéo retirée.' : 'Photo retirée.'}</span>
-            <button type="button" className="btn" onClick={undoRemove}>
-              Annuler
-            </button>
-          </div>
-        )}
         <div className="row" style={{ gap: 8 }}>
           <input
             className="input grow"
