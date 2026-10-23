@@ -99,14 +99,19 @@ Prérequis : Node.js 22 ou plus. `ffmpeg` est facultatif (seulement pour les vid
 
 ```sh
 npm install
-npm run import:exercises           # bibliothèque d'exercices dans server/data (~22 Mo)
-npm run hash-password              # affiche la valeur de APP_PASSWORD_HASH
-APP_PASSWORD_HASH='scrypt$…' npm run dev:server    # API sur http://localhost:3000
-npm run dev:client                 # app sur http://localhost:5173 (2e terminal)
+npm run import:exercises                  # bibliothèque d'exercices dans server/data (~22 Mo)
+npm run hash-password -- --write .env     # mot de passe de dev, écrit dans server/.env
+npm run dev                               # API sur :3000 et app sur http://localhost:5173
 ```
+
+Les données de dev sont dans `server/data`, indépendantes de celles du serveur de production. Pour tester
+sur de vraies données, remplace son contenu (`athlos.db` et `media/`) par une copie de celles de la
+production, serveur de dev arrêté. Le navigateur de dev garde sa propre copie locale : vide ensuite les
+données du site `localhost:5173` et reconnecte-toi.
 
 | Commande | Rôle |
 | --- | --- |
+| `npm run dev` | Serveur et app en développement, rechargés à chaque modification |
 | `npm test` | Tests du serveur et de l'app (Vitest) |
 | `npm run typecheck` | Vérification TypeScript des trois paquets |
 | `npm run build` | Compilation de l'app web dans `client/dist` |

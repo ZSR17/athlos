@@ -14,6 +14,7 @@
     "db:generate": "npm run db:generate -w server",
     "import:exercises": "npm run import:exercises -w server",
     "hash-password": "npm run hash-password -w server",
+    "dev": "concurrently -k -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "npm run dev -w client",
     "dev:server": "npm run dev -w server",
     "build": "npm run build -w client"
@@ -22,6 +23,7 @@
     "node": ">=22"
   },
   "devDependencies": {
+    "concurrently": "^9.2.5",
     "typescript": "^7.0.2"
   }
 }
