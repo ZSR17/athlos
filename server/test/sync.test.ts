@@ -212,6 +212,16 @@ describe('sync', () => {
     expect(remaining).toEqual([4, 1, 0]);
   });
 
+  it('closes even while a device listens to the event stream', async () => {
+    const address = await ctx.app.listen({ port: 0, host: '127.0.0.1' });
+    const stream = await fetch(`${address}/api/v1/events`, { headers: { authorization: `Bearer ${token}` } });
+    expect(stream.status).toBe(200);
+    const started = Date.now();
+    await ctx.app.close();
+    expect(Date.now() - started).toBeLessThan(2000);
+    await stream.body?.cancel().catch(() => undefined);
+  });
+
   it('requires a token', async () => {
     const res = await ctx.app.inject({ method: 'POST', url: '/api/v1/sync', payload: { since: 0, changes: {} } });
     expect(res.statusCode).toBe(401);

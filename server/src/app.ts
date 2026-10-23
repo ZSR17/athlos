@@ -23,7 +23,9 @@ interface AppDeps {
 }
 
 export async function buildApp({ config, db, ownerId, logger = false }: AppDeps) {
-  const app = Fastify({ logger, trustProxy: config.trustProxy });
+  // On close, drop open connections too: the live sync streams never end by themselves, and waiting for
+  // them blocked restarts (dev reload, container stop). Apps reconnect on their own.
+  const app = Fastify({ logger, trustProxy: config.trustProxy, forceCloseConnections: true });
   await app.register(rateLimit, { global: false });
 
   fs.mkdirSync(mediaDir(config.dataDir), { recursive: true });
