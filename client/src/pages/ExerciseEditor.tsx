@@ -1,9 +1,10 @@
-import { EQUIPMENT_LABELS, EXERCISE_TYPE_IDS, EXERCISE_TYPES, type ExerciseType, MUSCLE_IDS, MUSCLES, type MuscleId } from '@athlos/shared';
+import { type Crop, EQUIPMENT_LABELS, EXERCISE_TYPE_IDS, EXERCISE_TYPES, type ExerciseType, MUSCLE_IDS, MUSCLES, type MuscleId } from '@athlos/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { ask } from '../components/Dialog.tsx';
+import { CropSheet } from '../components/CropSheet.tsx';
 import { thumbUrl } from '../components/ExerciseMedia.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { db } from '../db/db.ts';
@@ -53,6 +54,15 @@ export function ExerciseEditor() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [link, setLink] = useState('');
+  // Photo waiting for its framing before being sent: `send` sends it with the part chosen, `release`
+  // frees its preview whatever happens, `added` runs once it is in the exercise.
+  const [cropping, setCropping] = useState<{
+    src: string;
+    message: string;
+    send: (crop: Crop | null) => Promise<{ ids: string[]; urls: string[] }>;
+    release?: () => void;
+    added?: () => void;
+  } | null>(null);
   // Last photo or video removed, until it is put back or another one is added.
   const [removed, setRemoved] = useState<{ ids: string[]; urls: string[]; at: number } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -126,14 +136,39 @@ export function ExerciseEditor() {
       setBusy(null);
     }
   };
+  // Photos are framed first; videos and GIFs go as they are.
   const onFile = async (file: File | undefined) => {
-    if (!file) return;
-    const video = file.type.startsWith('video/') || file.type === 'image/gif';
-    await addMedia(video ? 'Envoi et conversion de la vidéo…' : 'Envoi de la photo…', () => uploadMedia(file));
     if (fileInput.current) fileInput.current.value = '';
+    if (!file) return;
+    if (file.type.startsWith('video/') || file.type === 'image/gif') {
+      await addMedia('Envoi et conversion de la vidéo…', () => uploadMedia(file));
+      return;
+    }
+    const src = URL.createObjectURL(file);
+    setCropping({
+      src,
+      message: 'Envoi de la photo…',
+      send: (crop) => uploadMedia(file, crop ?? undefined),
+      release: () => URL.revokeObjectURL(src),
+    });
   };
-  const onLink = async () => {
-    if (link.trim() && (await addMedia('Import de l’image…', () => importMediaFromUrl(link.trim())))) setLink('');
+  const onLink = () => {
+    const url = link.trim();
+    if (!url) return;
+    setCropping({
+      src: url,
+      message: 'Import de l’image…',
+      send: (crop) => importMediaFromUrl(url, crop ?? undefined),
+      added: () => setLink(''),
+    });
+  };
+  // `crop` undefined: framing cancelled (a link stays in its field, to be tried again).
+  const closeCrop = async (crop: Crop | null | undefined) => {
+    const c = cropping;
+    setCropping(null);
+    if (!c) return;
+    if (crop !== undefined && (await addMedia(c.message, () => c.send(crop)))) c.added?.();
+    c.release?.();
   };
 
   const save = async (e: FormEvent) => {
@@ -310,13 +345,13 @@ export function ExerciseEditor() {
               // Enter imports the image instead of saving the whole exercise.
               if (e.key !== 'Enter') return;
               e.preventDefault();
-              void onLink();
+              onLink();
             }}
             placeholder="Ou colle le lien d’une image"
             aria-label="Lien d’une image sur Internet"
             disabled={!!busy}
           />
-          <button type="button" className="btn" disabled={!!busy || !link.trim()} onClick={() => void onLink()}>
+          <button type="button" className="btn" disabled={!!busy || !link.trim()} onClick={onLink}>
             Importer
           </button>
         </div>
@@ -354,6 +389,9 @@ export function ExerciseEditor() {
         <Icon name="check" size={20} />
         Enregistrer
       </button>
+      {cropping && (
+        <CropSheet src={cropping.src} onCancel={() => void closeCrop(undefined)} onConfirm={(crop) => void closeCrop(crop)} />
+      )}
     </form>
   );
 }

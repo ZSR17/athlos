@@ -1,4 +1,4 @@
-import { MAX_UPLOAD_BYTES, type UploadResponse } from '@athlos/shared';
+import { type Crop, MAX_UPLOAD_BYTES, type UploadResponse } from '@athlos/shared';
 import { ApiError, api } from '../lib/api.ts';
 import { syncNow } from '../sync/engine.ts';
 import { type AthlosDb, type LocalExercise, db as defaultDb } from './db.ts';
@@ -71,21 +71,26 @@ const LINK_ERRORS: Record<number, string> = {
   503: UPLOAD_ERRORS[503]!,
 };
 
-// Asks the server to download a picture from a link and keep it, like an uploaded photo.
-export async function importMediaFromUrl(url: string): Promise<UploadResponse> {
+// Asks the server to download a picture from a link and keep it (only `crop` of it), like an uploaded photo.
+export async function importMediaFromUrl(url: string, crop?: Crop): Promise<UploadResponse> {
   try {
-    return await api<UploadResponse>('/media/from-url', { method: 'POST', body: JSON.stringify({ url }) });
+    return await api<UploadResponse>('/media/from-url', { method: 'POST', body: JSON.stringify({ url, crop }) });
   } catch (err) {
     if (err instanceof ApiError) throw new UploadError(LINK_ERRORS[err.status] ?? 'Import refusé par le serveur.');
     throw new UploadError('Serveur injoignable : il faut être connecté pour importer une image.');
   }
 }
 
-// Sends a photo, GIF or video to the server, which compresses it.
-export async function uploadMedia(file: File): Promise<UploadResponse> {
+// Sends a photo, GIF or video to the server, which compresses it (and keeps only `crop` of a photo).
+export async function uploadMedia(file: File, crop?: Crop): Promise<UploadResponse> {
   if (file.size > MAX_UPLOAD_BYTES) throw new UploadError(UPLOAD_ERRORS[413]);
+  const query = crop ? `?crop=${[crop.x, crop.y, crop.w, crop.h].join(',')}` : '';
   try {
-    return await api<UploadResponse>('/media', { method: 'POST', body: file, headers: { 'content-type': file.type || 'application/octet-stream' } });
+    return await api<UploadResponse>(`/media${query}`, {
+      method: 'POST',
+      body: file,
+      headers: { 'content-type': file.type || 'application/octet-stream' },
+    });
   } catch (err) {
     if (err instanceof ApiError) throw new UploadError(UPLOAD_ERRORS[err.status] ?? 'Envoi refusé par le serveur.');
     throw new UploadError('Serveur injoignable : il faut être connecté pour ajouter une photo ou une vidéo.');

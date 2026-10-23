@@ -82,6 +82,48 @@ describe('media', () => {
     expect(remote.mock.calls.map(([u]) => String(u))).not.toContain('http://127.0.0.1/secret.png');
   });
 
+  it('crops photos to the part chosen in the app before compressing them', async () => {
+    const headers = await start();
+    // Left half red, right half blue: keeping the right third must give only blue.
+    const left = await sharp({ create: { width: 600, height: 900, channels: 3, background: '#ff0000' } }).png().toBuffer();
+    const img = await sharp({ create: { width: 1200, height: 900, channels: 3, background: '#0000ff' } })
+      .composite([{ input: left, left: 0, top: 0 }])
+      .png()
+      .toBuffer();
+    const res = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/v1/media?crop=0.6,0.2,0.4,0.6',
+      headers: { ...headers, 'content-type': 'image/png' },
+      payload: img,
+    });
+    expect(res.statusCode).toBe(200);
+    // 480 x 540 kept, then reduced to fit 480 px.
+    const row = ctx.db.select().from(media).get()!;
+    expect([row.width, row.height]).toEqual([427, 480]);
+    const file = path.join(mediaDir(ctx.dataDir), mediaRelPath(row.id, 'webp'));
+    const { dominant } = await sharp(fs.readFileSync(file)).stats();
+    expect(dominant.b).toBeGreaterThan(200);
+    expect(dominant.r).toBeLessThan(50);
+
+    vi.stubGlobal('fetch', async () => new Response(img, { headers: { 'content-type': 'image/png' } }));
+    const fromLink = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/v1/media/from-url',
+      headers,
+      payload: { url: 'https://93.184.216.34/a.png', crop: { x: 0, y: 0, w: 0.5, h: 2 / 3 } },
+    });
+    expect(fromLink.statusCode).toBe(200);
+    expect(ctx.db.select().from(media).all().find((m) => m.id === fromLink.json().ids[0])).toMatchObject({ width: 480, height: 480 });
+
+    const bad = await ctx.app.inject({
+      method: 'POST',
+      url: '/api/v1/media?crop=0.8,0,0.5,1',
+      headers: { ...headers, 'content-type': 'image/png' },
+      payload: img,
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
   it('refuses files that are not photos or videos', async () => {
     const headers = await start();
     expect((await upload(headers, Buffer.from('hello'), 'text/plain')).statusCode).toBe(415);

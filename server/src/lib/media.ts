@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import type { Crop } from '@athlos/shared';
 import sharp, { type OutputInfo } from 'sharp';
 import type { Db } from '../db/index.ts';
 import { media } from '../db/schema.ts';
@@ -60,12 +61,25 @@ async function saveFile(db: Db, dataDir: string, data: Buffer, info: FileInfo): 
   return id;
 }
 
-// Compresses an image to a small WebP.
-export async function storeImage(db: Db, dataDir: string, input: Buffer): Promise<string> {
+// Compresses an image to a small WebP, keeping only `crop` of it when given (taken from the full-size
+// picture, so cropping costs no quality).
+export async function storeImage(db: Db, dataDir: string, input: Buffer, crop?: Crop): Promise<string> {
   let out: { data: Buffer; info: OutputInfo };
   try {
-    out = await sharp(input)
-      .rotate()
+    let image = sharp(input).rotate();
+    if (crop) {
+      const upright = await image.toBuffer({ resolveWithObject: true });
+      const { width, height } = upright.info;
+      const left = Math.min(width - 1, Math.round(crop.x * width));
+      const top = Math.min(height - 1, Math.round(crop.y * height));
+      image = sharp(upright.data).extract({
+        left,
+        top,
+        width: Math.max(1, Math.min(width - left, Math.round(crop.w * width))),
+        height: Math.max(1, Math.min(height - top, Math.round(crop.h * height))),
+      });
+    }
+    out = await image
       .resize({ width: IMAGE_MAX_SIZE, height: IMAGE_MAX_SIZE, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: IMAGE_QUALITY })
       .toBuffer({ resolveWithObject: true });
@@ -136,8 +150,8 @@ async function storeVideo(db: Db, dataDir: string, input: Buffer, tools: Tools):
   }
 }
 
-// Photos become WebP; videos and animated GIFs become MP4 with a poster image.
-export async function storeUpload(db: Db, dataDir: string, input: Buffer, mime: string, tools: Tools): Promise<string[]> {
+// Photos become WebP (cropped to `crop` if given); videos and animated GIFs become MP4 with a poster image.
+export async function storeUpload(db: Db, dataDir: string, input: Buffer, mime: string, tools: Tools, crop?: Crop): Promise<string[]> {
   if (mime.startsWith('video/')) return storeVideo(db, dataDir, input, tools);
   if (!mime.startsWith('image/')) throw new UnsupportedMedia(mime);
   if (mime === 'image/gif') {
@@ -147,5 +161,5 @@ export async function storeUpload(db: Db, dataDir: string, input: Buffer, mime: 
       .catch(() => 1);
     if (pages > 1) return storeVideo(db, dataDir, input, tools);
   }
-  return [await storeImage(db, dataDir, input)];
+  return [await storeImage(db, dataDir, input, crop)];
 }

@@ -557,6 +557,28 @@ h3 {
 .media .frame-b {
   animation: frame-b 2.2s infinite ease-in-out;
 }
+/* Frame of the photo being cropped: same 3:2 shape as the exercise pictures. */
+.crop-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--surface2);
+  cursor: grab;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+}
+.crop-frame:active {
+  cursor: grabbing;
+}
+.crop-frame img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+  user-select: none;
+}
 /* Movement shown next to a hovered exercise of the picker (above the sheet it is in). */
 .exercise-preview {
   position: fixed;
