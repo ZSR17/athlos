@@ -237,7 +237,7 @@ export function LiveSession() {
                   label={metricLabel('weight', type)}
                   unit={metricLabel('weight', type).toLowerCase()}
                   value={draft.weightG}
-                  step={2500}
+                  step={500}
                   format={formatKg}
                   parse={parseKg}
                   onChange={(v) => setField('weightG', v)}
@@ -250,7 +250,7 @@ export function LiveSession() {
                 <Stepper label="Distance" unit="km" value={draft.distanceM} step={100} format={formatKm} parse={parseKm} onChange={(v) => setField('distanceM', v)} />
               )}
               {metrics.includes('duration') && (
-                <Stepper label="Temps" unit="temps" value={draft.durationS} step={5} format={formatDuration} parse={parseDuration} onChange={(v) => setField('durationS', v)} inputMode="numeric" />
+                <Stepper label="Temps" unit="temps" value={draft.durationS} step={1} format={formatDuration} parse={parseDuration} onChange={(v) => setField('durationS', v)} inputMode="numeric" />
               )}
             </div>
 

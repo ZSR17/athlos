@@ -1,6 +1,6 @@
 import { ValueInput } from './ValueInput.tsx';
 
-// Big −/+ buttons around a typed value, usable with one thumb during a set.
+// Big −/+ buttons around a typed value, quick to use during a set.
 export function Stepper({
   label,
   unit,
