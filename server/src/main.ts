@@ -46,6 +46,8 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 }
 
 await app.listen({ host: config.host, port: config.port });
+// In development the app is served by Vite, not by this server (which then only answers /api and /media).
+if (!config.staticDir) app.log.info('API only: open the app at http://localhost:5173 (npm run dev)');
 
 // First start of a new install: download the exercise library in the background (a few minutes on
 // a small server), then tell connected devices to fetch it.
