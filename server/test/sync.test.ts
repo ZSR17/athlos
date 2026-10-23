@@ -175,7 +175,7 @@ describe('sync', () => {
     expect(ctx.db.select().from(setLogs).get()!.weightG).toBeNull();
   });
 
-  it('paginates without skipping rows and notifies live listeners', async () => {
+  it('paginates without skipping rows and notifies event stream listeners', async () => {
     const seen: number[] = [];
     const listener = (_u: string, rev: number) => seen.push(rev);
     revEvents.on('rev', listener);
