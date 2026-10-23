@@ -3,7 +3,7 @@ import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyb
 import { CSS } from '@dnd-kit/utilities';
 import { type Crop, EQUIPMENT_LABELS, EXERCISE_TYPE_IDS, EXERCISE_TYPES, type ExerciseType, MUSCLE_IDS, MUSCLES, type MuscleId } from '@athlos/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type FormEvent, Fragment, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { ask } from '../components/Dialog.tsx';
@@ -172,6 +172,21 @@ export function ExerciseEditor() {
     set({ mediaIds: putBack(f.mediaIds, removed.ids), mediaUrls: putBack(f.mediaUrls, removed.urls) });
     setRemoved(null);
   };
+  // The last picture removed stays where it was, greyed out, with a small button to put it back.
+  const removedAt = removed ? groups.filter((g) => f.mediaIds.indexOf(g.ids[0]!) < removed.at).length : -1;
+  const removedTile = removed && (
+    <div className="media-tile removed">
+      <img src={thumbUrl(removed.urls)} alt="" />
+      <button
+        type="button"
+        className="remove"
+        aria-label={removed.urls[0]!.endsWith('.mp4') ? 'Remettre la vidéo' : 'Remettre la photo'}
+        onClick={undoRemove}
+      >
+        <Icon name="undo" size={16} />
+      </button>
+    </div>
+  );
 
   // Sends a file or a link to the server, then adds what it kept: one video, or up to two photos
   // (start and end position, shown in a loop).
@@ -364,13 +379,16 @@ export function ExerciseEditor() {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onMediaMoved}>
             <SortableContext items={groups.map((g) => g.ids[0]!)} strategy={horizontalListSortingStrategy}>
               {groups.map((g, k) => (
-                <MediaTile
-                  key={g.ids[0]}
-                  group={g}
-                  label={photos === 2 && !hasVideo ? (k === 0 ? 'Début' : 'Fin') : null}
-                  onRemove={() => removeGroup(g)}
-                />
+                <Fragment key={g.ids[0]}>
+                  {k === removedAt && removedTile}
+                  <MediaTile
+                    group={g}
+                    label={photos === 2 && !hasVideo ? (k === 0 ? 'Début' : 'Fin') : null}
+                    onRemove={() => removeGroup(g)}
+                  />
+                </Fragment>
               ))}
+              {removedAt === groups.length && removedTile}
             </SortableContext>
           </DndContext>
           {(hasVideo || photos < 2) && (
@@ -384,14 +402,6 @@ export function ExerciseEditor() {
             >
               <Icon name="plus" size={24} />
             </button>
-          )}
-          {removed && (
-            <div className="stack" role="status" style={{ gap: 6, alignItems: 'flex-start' }}>
-              <span className="small muted">{removed.urls[0]!.endsWith('.mp4') ? 'Vidéo retirée.' : 'Photo retirée.'}</span>
-              <button type="button" className="btn" onClick={undoRemove}>
-                Annuler
-              </button>
-            </div>
           )}
         </div>
         <div className="row" style={{ gap: 8 }}>

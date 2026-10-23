@@ -1210,6 +1210,10 @@ select.input {
   place-items: center;
   cursor: pointer;
 }
+.media-tile.removed img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
 .media-tile .badge {
   position: absolute;
   left: 6px;
