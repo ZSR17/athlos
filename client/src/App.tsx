@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { DialogHost } from './components/Dialog.tsx';
 import { Layout } from './components/Layout.tsx';
 import { getToken, onUnauthorized } from './lib/api.ts';
 import { ExerciseDetail } from './pages/ExerciseDetail.tsx';
@@ -41,6 +42,7 @@ export function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+      <DialogHost />
     </BrowserRouter>
   );
 }

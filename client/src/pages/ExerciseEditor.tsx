@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap.tsx';
+import { ask } from '../components/Dialog.tsx';
 import { thumbUrl } from '../components/ExerciseMedia.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { db } from '../db/db.ts';
@@ -136,7 +137,13 @@ export function ExerciseEditor() {
               className="btn btn-ghost"
               disabled={!!busy}
               onClick={async () => {
-                if (!confirm('Revenir à la version d’origine de la bibliothèque ? Tes changements seront perdus.')) return;
+                const sure = await ask({
+                  title: 'Rétablir l’original ?',
+                  message: 'L’exercice revient à la version de la bibliothèque. Tes changements seront perdus.',
+                  confirm: 'Rétablir l’original',
+                  danger: true,
+                });
+                if (!sure) return;
                 setBusy('Retour à l’original…');
                 try {
                   await resetExercise(id!);
@@ -155,7 +162,13 @@ export function ExerciseEditor() {
               type="button"
               className="btn btn-ghost btn-danger"
               onClick={async () => {
-                if (confirm(`Supprimer « ${existing.name} » ? Il reste visible dans tes séances passées.`)) {
+                const sure = await ask({
+                  title: `Supprimer « ${existing.name} » ?`,
+                  message: 'Il reste visible dans tes séances passées.',
+                  confirm: 'Supprimer',
+                  danger: true,
+                });
+                if (sure) {
                   await deleteExercise(existing.id);
                   navigate('/exercices', { replace: true });
                 }

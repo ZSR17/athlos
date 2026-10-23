@@ -13,6 +13,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap.tsx';
+import { ask } from '../components/Dialog.tsx';
 import { ExerciseList } from '../components/ExerciseList.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { Sheet } from '../components/Sheet.tsx';
@@ -116,7 +117,13 @@ export function WorkoutEditor() {
             type="button"
             className="btn btn-ghost btn-danger"
             onClick={async () => {
-              if (confirm(`Supprimer la séance « ${workout.name} » ?`)) {
+              const sure = await ask({
+                title: `Supprimer la séance « ${workout.name} » ?`,
+                message: 'Les séances déjà faites restent dans l’historique.',
+                confirm: 'Supprimer',
+                danger: true,
+              });
+              if (sure) {
                 await deleteWorkout(id);
                 navigate('/');
               }

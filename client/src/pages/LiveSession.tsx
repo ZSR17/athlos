@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { Chrono } from '../components/Chrono.tsx';
+import { ask } from '../components/Dialog.tsx';
 import { ExerciseMedia } from '../components/ExerciseMedia.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { Ring } from '../components/Ring.tsx';
@@ -302,12 +303,19 @@ export function LiveSession() {
           </button>
           <button
             type="button"
-            className="btn btn-danger"
+            className="btn btn-danger-solid"
             onClick={async () => {
-              if (confirm('Abandonner la séance ? Les séries validées seront supprimées.')) {
-                await discardSession();
-                navigate('/');
-              }
+              setFinishing(false);
+              const sure = await ask({
+                title: 'Abandonner la séance ?',
+                message: 'Les séries validées seront supprimées.',
+                confirm: 'Abandonner la séance',
+                cancel: 'Revenir',
+                danger: true,
+              });
+              if (!sure) return setFinishing(true);
+              await discardSession();
+              navigate('/');
             }}
           >
             Abandonner la séance

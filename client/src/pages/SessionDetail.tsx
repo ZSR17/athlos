@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { ask } from '../components/Dialog.tsx';
 import { thumbUrl } from '../components/ExerciseMedia.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { type LocalExercise, type LocalSetLog, db } from '../db/db.ts';
@@ -69,7 +70,13 @@ export function SessionDetail() {
           type="button"
           className="btn btn-ghost btn-danger"
           onClick={async () => {
-            if (confirm('Supprimer cette séance de l’historique ?')) {
+            const sure = await ask({
+              title: 'Supprimer cette séance ?',
+              message: 'Elle disparaît de l’historique et des records, sur tous tes appareils.',
+              confirm: 'Supprimer',
+              danger: true,
+            });
+            if (sure) {
               await deleteSession(id);
               navigate('/historique');
             }

@@ -1,6 +1,7 @@
 import { type Appearance, type StorageResponse } from '@athlos/shared';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { BodyMap } from '../components/BodyMap.tsx';
+import { ask } from '../components/Dialog.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { Progress } from '../components/Progress.tsx';
 import { db } from '../db/db.ts';
@@ -145,7 +146,13 @@ function DevicesSection() {
                 type="button"
                 className="btn btn-ghost btn-danger"
                 onClick={async () => {
-                  if (confirm(`Déconnecter « ${d.name} » ? Il devra se reconnecter avec le mot de passe.`)) {
+                  const sure = await ask({
+                    title: `Déconnecter « ${d.name} » ?`,
+                    message: 'Il devra se reconnecter avec le mot de passe.',
+                    confirm: 'Déconnecter',
+                    danger: true,
+                  });
+                  if (sure) {
                     await api(`/devices/${d.id}`, { method: 'DELETE' });
                     load();
                   }
