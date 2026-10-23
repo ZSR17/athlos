@@ -125,7 +125,7 @@ export function LiveSession() {
   const nextStep = steps[live.cursor];
 
   return (
-    <div className="page live" style={{ maxWidth: 720 }}>
+    <div className={`page live${resting ? ' resting' : ''}`} style={{ maxWidth: 720 }}>
       <header className="row" style={{ gap: 10 }}>
         <Link to="/" className="icon-btn" aria-label="Quitter l'écran (la séance continue)">
           <Icon name="back" />
@@ -214,7 +214,8 @@ export function LiveSession() {
                     className={`live-row${isCurrent ? ' current' : ''}${log ? ' done' : ''}`}
                     onClick={() => {
                       const idx = steps.findIndex((s) => s.item === step.item && s.set === set);
-                      if (idx !== -1) void updateLive({ cursor: idx, restEndsAt: null });
+                      // The rest carries on: a set done can be corrected meanwhile.
+                      if (idx !== -1) void updateLive({ cursor: idx });
                     }}
                     aria-current={isCurrent ? 'step' : undefined}
                   >
@@ -280,14 +281,21 @@ export function LiveSession() {
       )}
 
       {resting && (
-        <div className="rest-sheet" role="dialog" aria-modal="false" aria-label="Repos">
-          <span className="section-title">Repos</span>
-          <Ring size={190} progress={live.restTotalS ? 1 - restLeft / live.restTotalS : 0} color="var(--accent)">
-            <span className="num" style={{ fontSize: 60, lineHeight: 1 }}>
+        <div className="rest-bar" role="status" aria-label="Repos">
+          <Ring size={64} progress={live.restTotalS ? 1 - restLeft / live.restTotalS : 0} color="var(--accent)">
+            <span className="num" style={{ fontSize: 18, lineHeight: 1 }}>
               {formatDuration(restLeft)}
             </span>
           </Ring>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, width: '100%' }}>
+          <div className="grow stack" style={{ gap: 2, minWidth: 0 }}>
+            <span className="section-title">Repos</span>
+            {nextStep && (
+              <span className="small muted ellipsis">
+                Ensuite : {exercises?.get(live.plan[nextStep.item]!.exerciseId)?.name} · {formatSetValues(live.plan[nextStep.item]!.exerciseType, nextStep.target)}
+              </span>
+            )}
+          </div>
+          <div className="rest-actions">
             <button type="button" className="btn" onClick={() => updateLive({ restEndsAt: Math.max(now + 1000, live.restEndsAt! - 15000) })}>
               −15 s
             </button>
@@ -298,11 +306,6 @@ export function LiveSession() {
               Passer
             </button>
           </div>
-          {nextStep && (
-            <span className="small muted">
-              Ensuite : {exercises?.get(live.plan[nextStep.item]!.exerciseId)?.name} · {formatSetValues(live.plan[nextStep.item]!.exerciseType, nextStep.target)}
-            </span>
-          )}
         </div>
       )}
 

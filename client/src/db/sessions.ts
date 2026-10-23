@@ -78,7 +78,8 @@ export function doneKeys(logs: LocalSetLog[]): Set<string> {
   return new Set(logs.map((l) => `${l.workoutItemId}:${l.setIndex}`));
 }
 
-// Records a performed set, then moves to the next open set and starts the rest timer. `startedFrom`:
+// Records a performed set, then moves to the next open set and starts the rest timer (not when a set
+// already done is corrected: the rest going on, if any, carries on). `startedFrom`:
 // the values the set was offered with; what was added to them is added to the following sets too.
 export async function logSet(
   live: LiveState,
@@ -127,8 +128,7 @@ export async function logSet(
       ...live,
       bumps,
       cursor: next === -1 ? stepIndex : next,
-      restEndsAt: rest > 0 && next !== -1 ? t + rest * 1000 : null,
-      restTotalS: rest,
+      ...(already ? {} : { restEndsAt: rest > 0 && next !== -1 ? t + rest * 1000 : null, restTotalS: rest }),
     });
   });
 }

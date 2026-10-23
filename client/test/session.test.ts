@@ -9,6 +9,7 @@ import {
   previousPerformance,
   sessionLogs,
   startSession,
+  updateLive,
 } from '../src/db/sessions.ts';
 import { addItem, createWorkout, deleteWorkout, liveItems, toggleSupersetWithNext, updateItem } from '../src/db/workouts.ts';
 import { metricsForType, recordFor } from '../src/lib/progress.ts';
@@ -253,6 +254,22 @@ describe('session flow', () => {
 
     // A decrease is not carried.
     expect(increase({ reps: 6, weightG: 80000 }, offered)).toEqual({});
+  });
+
+  it('corrects a set done without restarting the rest', async () => {
+    const w = await createWorkout('Jambes', db);
+    await addItem(w, squat, db);
+    await startSession(w, db);
+    let live = (await getLive(db))!;
+    await logSet(live, 0, { reps: 8, weightG: 80000 }, db);
+    live = (await getLive(db))!;
+    await updateLive({ restEndsAt: null }, db);
+    // Back on set 1 to correct it: no new rest, and the cursor returns to the next set to do.
+    await updateLive({ cursor: 0 }, db);
+    await logSet((await getLive(db))!, 0, { reps: 9, weightG: 80000 }, db);
+    live = (await getLive(db))!;
+    expect(live.restEndsAt).toBeNull();
+    expect(live.cursor).toBe(1);
   });
 
   it('discards a session without any set', async () => {
