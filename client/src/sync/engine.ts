@@ -5,8 +5,6 @@ import { getLive } from '../db/sessions.ts';
 import { ApiError, api, getToken } from '../lib/api.ts';
 import { applySharedAppearance, getAppearance, onAppearanceEdited } from '../lib/appearance.ts';
 import { createStore } from '../lib/store.ts';
-import { applyWatchActions } from '../lib/watch.ts';
-import { precacheMedia } from './media.ts';
 import { syncSettings } from './settings.ts';
 
 export type SyncState = 'idle' | 'syncing' | 'synced' | 'offline' | 'paused-wifi' | 'paused-session' | 'error';
@@ -197,7 +195,6 @@ async function run(db: AthlosDb, force: boolean): Promise<void> {
       syncStatus.set({ download: { done: received, total: received + res.remaining } });
     }
     syncStatus.set({ state: 'synced', lastSyncAt: Date.now(), pending: await countPending(db), rejected, download: null });
-    void precacheMedia(db).catch(() => undefined);
   } catch (err) {
     // A proxy in front of a stopped server answers 502-504: that is "unreachable", not a sync error.
     const failed = err instanceof ApiError && (err.status < 502 || err.status > 504);
@@ -242,8 +239,7 @@ async function listenEvents(signal: AbortSignal, db: AthlosDb): Promise<void> {
     for (const m of messages) {
       const data = m.split('\n').find((l) => l.startsWith('data: '));
       if (!data) continue;
-      const message = JSON.parse(data.slice(6)) as { rev?: number; live?: number };
-      if (message.live) void applyWatchActions(db);
+      const message = JSON.parse(data.slice(6)) as { rev?: number };
       if (message.rev !== undefined && message.rev > ((await meta<number>(db, 'syncRev')) ?? 0)) requestSync(300);
     }
   }
@@ -279,7 +275,6 @@ export function startSync(db: AthlosDb = defaultDb): () => void {
   const onVisible = () => {
     if (document.visibilityState === 'visible') {
       void syncNow();
-      void applyWatchActions(db);
       if (!streaming) void connect();
     } else {
       stream?.abort();
@@ -307,13 +302,12 @@ export function startSync(db: AthlosDb = defaultDb): () => void {
     if (document.visibilityState === 'visible' && !streaming) void syncNow();
   }, 30_000);
 
-  // Ask the browser not to evict the offline data (iOS clears unprotected storage after a while).
+  // Ask the browser not to evict the local data (it may clear unprotected storage when space runs low).
   void navigator.storage?.persist?.().catch(() => false);
 
   document.addEventListener('visibilitychange', onVisible);
   addEventListener('online', onOnline);
   void syncNow();
-  void applyWatchActions(db);
   void connect();
 
   return () => {

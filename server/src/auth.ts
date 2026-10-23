@@ -19,7 +19,7 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-// Long-lived bearer token per device: the PWA keeps it so offline-queued syncs never hit a login wall.
+// Long-lived bearer token per device: the app keeps it so queued syncs never hit a login wall.
 export function createDevice(db: Db, userId: string, name: string): { token: string; deviceId: string } {
   const token = randomBytes(32).toString('base64url');
   const deviceId = randomUUID();

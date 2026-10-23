@@ -75,13 +75,13 @@ export function doneKeys(logs: LocalSetLog[]): Set<string> {
   return new Set(logs.map((l) => `${l.workoutItemId}:${l.setIndex}`));
 }
 
-// Records a performed set, then moves to the next open set and starts the rest timer. `t`: when the
-// set was done (earlier when it was validated from the watch while the app was in the background).
-export async function logSet(live: LiveState, stepIndex: number, values: SetValues, db: AthlosDb = defaultDb, t = Date.now()) {
+// Records a performed set, then moves to the next open set and starts the rest timer.
+export async function logSet(live: LiveState, stepIndex: number, values: SetValues, db: AthlosDb = defaultDb) {
   const steps = buildSteps(live.plan, live.extra);
   const step = steps[stepIndex];
   if (!step) return;
   const item = live.plan[step.item]!;
+  const t = Date.now();
   await db.transaction('rw', db.setLogs, db.meta, async () => {
     const already = (await sessionLogs(live.sessionId, db)).find(
       (l) => l.workoutItemId === item.itemId && l.setIndex === step.set,
@@ -108,7 +108,7 @@ export async function logSet(live: LiveState, stepIndex: number, values: SetValu
     await saveLive(db, {
       ...live,
       cursor: next === -1 ? stepIndex : next,
-      restEndsAt: rest > 0 && next !== -1 && t + rest * 1000 > Date.now() ? t + rest * 1000 : null,
+      restEndsAt: rest > 0 && next !== -1 ? t + rest * 1000 : null,
       restTotalS: rest,
     });
   });

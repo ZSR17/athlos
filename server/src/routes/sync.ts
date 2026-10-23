@@ -1,7 +1,6 @@
 import { syncRequest } from '@athlos/shared';
 import type { FastifyInstance } from 'fastify';
 import type { Db } from '../db/index.ts';
-import { liveEvents } from '../live.ts';
 import { revEvents, sync } from '../sync.ts';
 
 const HEARTBEAT_MS = 25_000;
@@ -14,7 +13,7 @@ export function syncRoutes(app: FastifyInstance, { db }: { db: Db }) {
   });
 
   // Server-sent events: one `{"rev":N}` message whenever this user's data changes, so open apps
-  // pull right away, and `{"live":1}` when the watch validated a set. Read with fetch() (EventSource cannot send the Authorization header).
+  // pull right away. Read with fetch() (EventSource cannot send the Authorization header).
   app.get('/events', async (request, reply) => {
     const userId = request.auth!.userId;
     reply.hijack();
@@ -28,17 +27,12 @@ export function syncRoutes(app: FastifyInstance, { db }: { db: Db }) {
     const send = (u: string, rev: number) => {
       if (u === userId) res.write(`data: {"rev":${rev}}\n\n`);
     };
-    const sendLive = (u: string) => {
-      if (u === userId) res.write('data: {"live":1}\n\n');
-    };
     res.write(': connected\n\n');
     revEvents.on('rev', send);
-    liveEvents.on('action', sendLive);
     const heartbeat = setInterval(() => res.write(': ping\n\n'), HEARTBEAT_MS);
     request.raw.on('close', () => {
       clearInterval(heartbeat);
       revEvents.off('rev', send);
-      liveEvents.off('action', sendLive);
     });
   });
 }

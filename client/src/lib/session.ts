@@ -64,11 +64,6 @@ export function workingNumber(item: PlanItem, set: number): number {
   return item.targets.slice(0, set + 1).filter((t) => t.kind !== 'warmup').length + Math.max(0, set + 1 - item.targets.length);
 }
 
-// "Série 2 · Squat", "Échauffement · Squat".
-export function stepLabel(plan: PlanItem[], step: Step, exerciseName: string): string {
-  return `${step.target.kind === 'warmup' ? 'Échauffement' : `Série ${workingNumber(plan[step.item]!, step.set)}`} · ${exerciseName}`;
-}
-
 export function stepKey(plan: PlanItem[], step: Step): string {
   return `${plan[step.item]!.itemId}:${step.set}`;
 }

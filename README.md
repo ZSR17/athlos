@@ -1,22 +1,23 @@
 <div align="center">
 
-<img src="client/public/icons/icon-192.png" width="96" alt="Logo Athlos">
+<img src="client/public/icons/favicon.svg" width="96" alt="Logo Athlos">
 
 # Athlos
 
-**Suivi d'entraînement auto-hébergé, pensé pour la salle : rapide à une main, utilisable sans réseau.**
+**Suivi d'entraînement auto-hébergé : planifie tes séances, suis-les en direct, vois ta progression.**
 
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React-PWA-61dafb?logo=react&logoColor=black)
+![React](https://img.shields.io/badge/React-Vite-61dafb?logo=react&logoColor=black)
 ![Fastify](https://img.shields.io/badge/Fastify-SQLite-000000?logo=fastify&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-arm64%20%7C%20amd64-2496ed?logo=docker&logoColor=white)
 
 </div>
 
-Athlos est une application web installable (PWA) pour planifier ses séances, les suivre en direct et voir
-sa progression. Elle tourne sur ton propre serveur, un petit ordinateur suffit, et garde tout sur
-l'appareil : en salle, sans réseau, elle fonctionne exactement pareil, puis se synchronise au retour.
+Athlos est une application web pour planifier ses séances, les suivre en direct et voir sa progression.
+Elle tourne sur ton propre serveur (un petit ordinateur suffit) et garde une copie des données dans le
+navigateur : une coupure de réseau n'interrompt rien, la synchronisation reprend au retour. Des apps
+iPhone et Android natives sont prévues ; elles utiliseront la même API de synchronisation.
 
 Pas de compte, pas de publicité, pas de service tiers : tes données restent chez toi.
 
@@ -35,18 +36,15 @@ Pas de compte, pas de publicité, pas de service tiers : tes données restent ch
 
 **En salle**
 - Séance guidée : valeurs pré-remplies avec ta dernière performance, minuteur de repos (± 15 s), chrono.
-- L'écran reste allumé ; un bip au volume réglable signale la fin du repos.
-- Notification de fin de repos envoyée par le serveur : elle arrive écran verrouillé, vibre en mode
-  silencieux et s'affiche sur l'Apple Watch.
-- Validation d'une série depuis l'Apple Watch, avec un Raccourci iOS.
+- Un bip au volume réglable signale la fin du repos.
 
 **Progression**
 - Historique des séances, records personnels, 1RM estimé, volume.
 - Graphiques de progression par exercice.
 
 **Multi-appareils**
-- iPhone et PC (Android en principe, pas encore testé) : la même app, avec une mise en page grand écran sur
-  ordinateur.
+- Dans n'importe quel navigateur récent, avec une mise en page adaptée aux fenêtres étroites comme aux
+  grands écrans.
 - Synchronisation en temps réel entre les appareils, ou seulement en Wi-Fi, ou seulement en fin de séance.
 - Couleurs personnalisables, par appareil ou partagées.
 - Export et import de toutes tes données en JSON.
@@ -56,21 +54,17 @@ Pas de compte, pas de publicité, pas de service tiers : tes données restent ch
 ```mermaid
 flowchart LR
   subgraph Appareils
-    A["📱 iPhone / Android<br/>PWA + IndexedDB"]
-    B["💻 PC<br/>PWA + IndexedDB"]
-    W["⌚ Apple Watch<br/>Raccourci iOS"]
+    A["💻 Navigateur<br/>app web + IndexedDB"]
+    B["💻 Autre navigateur<br/>app web + IndexedDB"]
   end
   subgraph Serveur["Ton serveur (Docker)"]
     S["Fastify<br/>API + app compilée"]
     D[("SQLite<br/>+ médias")]
   end
-  P["Service de notifications<br/>Apple / Google"]
 
-  A <-- "synchro<br/>(quand le réseau est là)" --> S
+  A <-- "synchro + temps réel" --> S
   B <-- "synchro + temps réel" --> S
-  W -- "valider la série" --> S
   S --- D
-  S -- "fin de repos" --> P --> A
 ```
 
 Chaque appareil travaille sur sa propre copie locale des données. Le serveur sert l'application, garde
@@ -79,8 +73,8 @@ Les détails sont dans [docs/architecture.md](docs/architecture.md).
 
 ## Installation
 
-Il faut une machine avec Docker, et un accès en **HTTPS** : les navigateurs n'autorisent l'installation de
-l'app, le mode hors-ligne et les notifications que sur une adresse sécurisée.
+Il faut une machine avec Docker. Un accès en **HTTPS** est recommandé : le mot de passe et les données
+passent par le réseau.
 
 ```sh
 git clone https://github.com/ZSR17/athlos.git && cd athlos
@@ -95,8 +89,7 @@ docker run -d --name athlos --restart unless-stopped \
 ```
 
 Au premier démarrage, le serveur télécharge la bibliothèque d'exercices (quelques minutes). Mets ensuite un
-reverse proxy HTTPS devant le port 3000, puis ouvre l'adresse et installe l'app :
-Safari → Partager → « Sur l'écran d'accueil » sur iPhone.
+reverse proxy HTTPS devant le port 3000, puis ouvre l'adresse dans un navigateur.
 
 Configuration, reverse proxy, sauvegardes et mises à jour : [docs/deploiement.md](docs/deploiement.md).
 
@@ -116,16 +109,16 @@ npm run dev:client                 # app sur http://localhost:5173 (2e terminal)
 | --- | --- |
 | `npm test` | Tests du serveur et de l'app (Vitest) |
 | `npm run typecheck` | Vérification TypeScript des trois paquets |
-| `npm run build` | Compilation de la PWA dans `client/dist` |
+| `npm run build` | Compilation de l'app web dans `client/dist` |
 | `npm run db:generate` | Nouvelle migration après une modification de `server/src/db/schema.ts` |
 | `npx knip` | Détection du code et des dépendances inutilisés |
 
 ```
 athlos/
 ├── shared/   vocabulaire commun : types d'exercice, muscles, schémas de l'API (zod)
-├── server/   API Fastify, SQLite (Drizzle), médias, import des exercices, notifications
+├── server/   API Fastify, SQLite (Drizzle), médias, import des exercices
 │   └── drizzle/   migrations SQL, appliquées au démarrage
-├── client/   PWA React + Vite, données locales IndexedDB (Dexie), service worker (Workbox)
+├── client/   app web React + Vite, données locales IndexedDB (Dexie)
 └── docs/     documentation détaillée
 ```
 
@@ -134,7 +127,7 @@ français.
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) : données locales, synchronisation, médias, notifications, montre.
+- [Architecture](docs/architecture.md) : données locales, synchronisation, médias.
 - [Déploiement](docs/deploiement.md) : Docker, configuration, HTTPS, sauvegardes, mises à jour.
 - [API](docs/api.md) : toutes les routes du serveur.
 

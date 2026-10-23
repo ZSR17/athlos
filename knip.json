@@ -1,4 +1,4 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "ignore": ["client/public/push-sw.js"]
+  "ignore": ["client/public/sw.js"]
 }

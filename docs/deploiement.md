@@ -6,12 +6,11 @@ n'importe quel serveur Linux, arm64 ou amd64, même modeste : 512 Mo de RAM suff
 ## Prérequis
 
 - **Docker** (avec Docker Compose de préférence).
-- **HTTPS.** Indispensable : sans adresse sécurisée, le navigateur refuse d'installer l'app, de la faire
-  fonctionner hors ligne et d'envoyer des notifications. Sur un réseau privé, un reverse proxy avec sa
-  propre autorité de certification convient, à condition d'installer le certificat racine sur chaque
-  appareil.
+- **HTTPS**, recommandé : le mot de passe, le jeton de l'appareil et les données passent par le réseau.
+  Sur un réseau privé, un reverse proxy avec sa propre autorité de certification convient, à condition
+  d'installer le certificat racine sur chaque appareil.
 - **Accès Internet sortant** pour le serveur, seulement pour le premier téléchargement de la bibliothèque
-  d'exercices et pour les notifications. L'app elle-même n'a pas besoin d'être exposée sur Internet :
+  d'exercices. L'app elle-même n'a pas besoin d'être exposée sur Internet :
   un accès local, plus un VPN pour l'extérieur, est l'usage prévu.
 
 ## Installation avec Docker Compose
@@ -76,28 +75,20 @@ Variables d'environnement, dans `env/athlos.env` ou dans `compose.yml` :
 | `APP_PASSWORD_HASH` | *(vide)* | Empreinte scrypt du mot de passe. **Obligatoire** : sans elle, toute connexion est refusée. Entre apostrophes dans un fichier lu par Compose, sinon chaque `$` est pris pour une variable. |
 | `HOME_CIDRS` | `192.168.1.0/24` | Réseaux considérés comme « à la maison » (réglage de synchro « à la maison uniquement »). Plusieurs valeurs séparées par des virgules. |
 | `TRUST_PROXY` | `127.0.0.1/32,172.16.0.0/12` | Proxys dont l'en-tête `X-Forwarded-For` est accepté. |
-| `PUSH_SUBJECT` | lien de ce dépôt | Contact transmis aux services de notification (`mailto:` ou `https:`). Doit être sur un **domaine public réel** : Apple refuse un domaine local (`403 BadJwtToken`). |
 | `LOG_LEVEL` | `info` | Niveau des logs (`debug`, `info`, `warn`, `error`). |
 | `PORT`, `HOST` | `3000`, `0.0.0.0` | Écoute du serveur. |
 | `DATA_DIR` | `/data` | Base SQLite, médias et sauvegardes. |
 | `FFMPEG_PATH`, `FFPROBE_PATH` | `ffmpeg`, `ffprobe` | Conversion des vidéos (déjà dans l'image). |
 
-## Installer l'app sur les appareils
+## Ouvrir l'app
 
-- **iPhone** : ouvrir l'adresse dans Safari → Partager → « Sur l'écran d'accueil ». Les notifications ne
-  fonctionnent que dans l'app ouverte depuis cette icône (iOS 16.4 ou plus).
-- **Android** : Chrome propose « Installer l'application ».
-- **PC** : Chrome ou Edge, icône d'installation dans la barre d'adresse.
-
-Au premier lancement, l'app demande le mot de passe, puis le mode de synchronisation.
+Ouvrir l'adresse du serveur dans un navigateur récent. Au premier lancement, l'app demande le mot de passe, puis le mode de synchronisation.
 
 ## Sauvegardes
 
 - Chaque jour, le serveur copie la base dans `data/backups/` (`VACUUM INTO`) et garde les 7 dernières.
 - Les médias sont dans `data/media/`. Sauvegarder tout `data/` suffit.
 - Depuis l'app, Réglages → Mes données exporte toutes tes données en JSON.
-- La clé privée des notifications est dans la base : si elle est perdue, chaque appareil doit simplement
-  réactiver les notifications.
 
 Restaurer une copie : arrêter le conteneur, remplacer `data/athlos.db` par une copie de `data/backups/`,
 supprimer `athlos.db-wal` et `athlos.db-shm`, puis redémarrer.

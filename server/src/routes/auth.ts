@@ -6,7 +6,6 @@ import type { Config } from '../config.ts';
 import type { Db } from '../db/index.ts';
 import { devices } from '../db/schema.ts';
 import { verifyPassword } from '../lib/password.ts';
-import { removeSubscriptions } from '../push.ts';
 
 export function authRoutes(app: FastifyInstance, { db, config, ownerId }: { db: Db; config: Config; ownerId: string }) {
   app.post(
@@ -25,7 +24,6 @@ export function authRoutes(app: FastifyInstance, { db, config, ownerId }: { db: 
 
   app.post('/auth/logout', async (request) => {
     db.update(devices).set({ revoked: true }).where(eq(devices.id, request.auth!.deviceId)).run();
-    removeSubscriptions(db, request.auth!.deviceId);
     return { ok: true };
   });
 
@@ -46,7 +44,6 @@ export function authRoutes(app: FastifyInstance, { db, config, ownerId }: { db: 
       .where(and(eq(devices.id, request.params.id), eq(devices.userId, request.auth!.userId)))
       .run();
     if (res.changes === 0) return reply.code(404).send({ error: 'not_found' });
-    removeSubscriptions(db, request.params.id);
     return { ok: true };
   });
 }

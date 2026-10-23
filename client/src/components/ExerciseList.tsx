@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { type LocalExercise, db } from '../db/db.ts';
 import { syncStatus } from '../sync/engine.ts';
-import { mediaStatus } from '../sync/media.ts';
 import { thumbUrl } from './ExerciseMedia.tsx';
 import { Icon } from './Icon.tsx';
 import { Progress } from './Progress.tsx';
@@ -34,7 +33,6 @@ function useExercises(): LocalExercise[] | undefined {
 export function ExerciseList({ onSelect }: { onSelect?: (e: LocalExercise) => void }) {
   const all = useExercises();
   const { download } = syncStatus.use();
-  const media = mediaStatus.use();
   const [query, setQuery] = useState('');
   const [group, setGroup] = useState<string>('all');
   const [shown, setShown] = useState(PAGE);
@@ -53,7 +51,7 @@ export function ExerciseList({ onSelect }: { onSelect?: (e: LocalExercise) => vo
 
   useEffect(() => setShown(PAGE), [query, group]);
 
-  // Render progressively as the user scrolls: 900 rows with images at once is heavy on a phone.
+  // Render progressively as the user scrolls: 900 rows with images at once is heavy.
   useEffect(() => {
     const el = sentinel.current;
     if (!el) return;
@@ -90,7 +88,6 @@ export function ExerciseList({ onSelect }: { onSelect?: (e: LocalExercise) => vo
         {all === undefined ? 'Chargement…' : `${filtered.length} exercice${filtered.length > 1 ? 's' : ''}`}
       </span>
       {download && <Progress label="Téléchargement de la bibliothèque" done={download.done} total={download.total} />}
-      {media.running && <Progress label="Téléchargement des images" done={media.done} total={media.total} />}
       {all?.length === 0 && !download && (
         <p className="muted">La bibliothèque se télécharge depuis le serveur à la première connexion.</p>
       )}

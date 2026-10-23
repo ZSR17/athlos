@@ -29,6 +29,13 @@
       "when": 1792523823598,
       "tag": "0003_push_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792775713840,
+      "tag": "0004_drop_push_subscriptions",
+      "breakpoints": true
     }
   ]
 }

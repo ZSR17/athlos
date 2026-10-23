@@ -1,4 +1,4 @@
-import { API_PREFIX, type Appearance, type LoginResponse, type StorageResponse } from '@athlos/shared';
+import { type Appearance, type StorageResponse } from '@athlos/shared';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { Icon } from '../components/Icon.tsx';
@@ -10,59 +10,8 @@ import { BackupError, downloadBackup, exportData, importData } from '../lib/back
 import { onColor, tooSimilar } from '../lib/color.ts';
 import { soundSettings, testBeep, useNow } from '../lib/feedback.ts';
 import { formatBytes } from '../lib/format.ts';
-import { type PushState, disablePush, enablePush, pushState, remindRestEnd } from '../lib/push.ts';
-import { publishLive, watchSettings } from '../lib/watch.ts';
 import { type SyncState, enableSharedAppearance, syncNow, syncStatus } from '../sync/engine.ts';
-import { mediaCoverage, mediaStatus, precacheMedia } from '../sync/media.ts';
 import { describeMode, syncSettings } from '../sync/settings.ts';
-
-// Average size of a library image (WebP, 480 px), to estimate what a full download costs.
-const AVG_IMAGE_BYTES = 13 * 1024;
-
-function OfflineImages() {
-  const media = mediaStatus.use();
-  const { download } = syncStatus.use();
-  const [coverage, setCoverage] = useState<{ cached: number; total: number } | null>(null);
-  useEffect(() => {
-    void mediaCoverage(db).then(setCoverage);
-  }, [media.running, media.done, download]);
-  const missing = coverage ? coverage.total - coverage.cached : 0;
-
-  return (
-    <div className="stack" style={{ padding: 14, gap: 10, borderTop: '1px solid var(--line)' }}>
-      <div className="row between">
-        <span className="stack" style={{ gap: 2 }}>
-          <span style={{ fontWeight: 700 }}>Images des exercices</span>
-          <span className="small muted">
-            {coverage === null
-              ? 'Calcul…'
-              : missing === 0
-                ? 'Toutes disponibles hors connexion'
-                : `${coverage.cached} / ${coverage.total} sur cet appareil`}
-          </span>
-        </span>
-      </div>
-      {media.running ? (
-        <Progress label="Téléchargement des images" done={media.done} total={media.total} />
-      ) : (
-        missing > 0 && (
-          <button type="button" className="btn" disabled={!!download} onClick={() => void precacheMedia(db, { all: true })}>
-            Tout télécharger pour le hors-ligne (≈ {formatBytes(missing * AVG_IMAGE_BYTES)})
-          </button>
-        )
-      )}
-      {media.failed && !media.running && (
-        <span className="small" style={{ color: 'var(--warn)' }}>
-          Téléchargement interrompu : serveur injoignable. Relance-le une fois connecté.
-        </span>
-      )}
-      <span className="small muted" style={{ lineHeight: 1.45 }}>
-        Les images des exercices de tes séances sont téléchargées automatiquement. Le reste de la bibliothèque
-        se charge à l’affichage, ou d’un coup avec ce bouton (de préférence en Wi-Fi).
-      </span>
-    </div>
-  );
-}
 
 const STATUS: Record<SyncState, string> = {
   idle: 'Pas encore synchronisé',
@@ -119,164 +68,11 @@ function SoundSection() {
           />
         </label>
         <span className="small muted" style={{ lineHeight: 1.45 }}>
-          Relatif au volume du téléphone : à 100 %, le bip est aussi fort que le volume réglé sur l’iPhone.
+          Relatif au volume de l’appareil : à 100 %, le bip est aussi fort que le volume du système.
         </span>
         <button type="button" className="btn" onClick={testBeep}>
           Tester le bip
         </button>
-      </div>
-    </section>
-  );
-}
-
-function NotificationSection() {
-  const [state, setState] = useState<PushState>(pushState);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const toggle = async () => {
-    setBusy(true);
-    setMessage(null);
-    try {
-      setState(state === 'on' ? await disablePush() : await enablePush());
-    } catch {
-      setMessage('Serveur injoignable : réessaie une fois connecté.');
-      setState(pushState());
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <section className="stack">
-      <h2 className="section-title">Notification de fin de repos</h2>
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {state === 'unsupported' ? (
-          <p className="small muted" style={{ margin: 0, padding: 14, lineHeight: 1.45 }}>
-            Sur iPhone, ajoute d’abord Athlos à l’écran d’accueil (Safari → Partager → « Sur l’écran d’accueil »), puis ouvre-le
-            depuis son icône.
-          </p>
-        ) : state === 'denied' ? (
-          <p className="small muted" style={{ margin: 0, padding: 14, lineHeight: 1.45 }}>
-            Notifications refusées : autorise-les dans les réglages du téléphone (Notifications → Athlos).
-          </p>
-        ) : (
-          <Toggle
-            on={state === 'on'}
-            onChange={() => !busy && void toggle()}
-            title="Prévenir à la fin du repos"
-            text="Une notification, même écran verrouillé ou en mode silencieux (vibration), et sur la montre. Demande du réseau ; hors réseau, il reste le bip."
-          />
-        )}
-        {state === 'on' && (
-          <div className="toggle-row" style={{ cursor: 'default' }}>
-            <span className="grow small muted">Verrouille l’écran après avoir touché « Tester » : la notification arrive 10 s plus tard.</span>
-            <button
-              type="button"
-              className="btn"
-              onClick={async () => {
-                const result = await remindRestEnd(10_000, 'Test : la notification de fin de repos fonctionne.');
-                setMessage(
-                  result === 'scheduled'
-                    ? 'Notification prévue dans 10 s.'
-                    : result === 'unsubscribed'
-                      ? 'Le serveur ne connaît pas cet appareil : désactive puis réactive la notification.'
-                      : 'Serveur injoignable : réessaie une fois connecté.',
-                );
-              }}
-            >
-              Tester
-            </button>
-          </div>
-        )}
-      </div>
-      {message && (
-        <span className="small" role="status" style={{ color: 'var(--accent-text)' }}>
-          {message}
-        </span>
-      )}
-    </section>
-  );
-}
-
-function CopyButton({ label, value }: { label: string; value: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      className="btn"
-      onClick={async () => {
-        await navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }}
-    >
-      {copied ? 'Copié' : label}
-    </button>
-  );
-}
-
-function WatchSection() {
-  const { enabled } = watchSettings.use();
-  const [key, setKey] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  const createKey = async () => {
-    setFailed(false);
-    try {
-      const { token } = await api<LoginResponse>('/devices/shortcut', { method: 'POST', body: JSON.stringify({}) });
-      setKey(token);
-    } catch {
-      setFailed(true);
-    }
-  };
-
-  return (
-    <section className="stack">
-      <h2 className="section-title">Apple Watch</h2>
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <Toggle
-          on={enabled}
-          onChange={() => {
-            watchSettings.set({ enabled: !enabled });
-            void publishLive();
-          }}
-          title="Valider la série depuis la montre"
-          text="Avec un raccourci : la série est validée avec les valeurs affichées, le repos démarre. Demande du réseau."
-        />
-        {enabled && (
-          <div className="stack" style={{ padding: 14, gap: 10 }}>
-            {key ? (
-              <>
-                <ol className="small" style={{ margin: 0, paddingLeft: 18, lineHeight: 1.5 }}>
-                  <li>App Raccourcis → « + » → action « Obtenir le contenu de l’URL ». Colle l’adresse.</li>
-                  <li>
-                    « Afficher plus » : méthode <b>POST</b>, ajoute un en-tête <b>Authorization</b> et colle la clé comme valeur.
-                  </li>
-                  <li>Ajoute l’action « Afficher le résultat ».</li>
-                  <li>Nomme-le « Valider la série » et active « Afficher sur Apple Watch » dans ses réglages (ⓘ).</li>
-                  <li>Sur la montre : complication Raccourcis, Smart Stack ou bouton Action.</li>
-                </ol>
-                <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-                  <CopyButton label="Copier l’adresse" value={`${location.origin}${API_PREFIX}/live/actions`} />
-                  <CopyButton label="Copier la clé" value={`Bearer ${key}`} />
-                </div>
-                <span className="small muted">
-                  La clé n’est affichée qu’une fois. Elle apparaît dans « Appareils connectés » : la déconnecter désactive le
-                  raccourci.
-                </span>
-              </>
-            ) : (
-              <>
-                <span className="small muted">Crée une clé pour le raccourci, puis suis les étapes affichées.</span>
-                <button type="button" className="btn" onClick={() => void createKey()}>
-                  Créer la clé du raccourci
-                </button>
-                {failed && <span className="small" style={{ color: 'var(--accent-text)' }}>Serveur injoignable : réessaie une fois connecté.</span>}
-              </>
-            )}
-          </div>
-        )}
       </div>
     </section>
   );
@@ -439,7 +235,6 @@ function StorageSection() {
           </span>
           {device && <span style={{ fontWeight: 700 }}>{formatBytes(device.usage)}</span>}
         </div>
-        <OfflineImages />
       </div>
       <span className="small muted">Les photos et vidéos qu’aucun exercice n’utilise plus sont supprimées du serveur.</span>
     </section>
@@ -515,10 +310,6 @@ export function Settings() {
       <SyncSection />
 
       <SoundSection />
-
-      <NotificationSection />
-
-      <WatchSection />
 
       <section className="stack">
         <h2 className="section-title">Apparence</h2>

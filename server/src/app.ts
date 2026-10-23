@@ -12,28 +12,19 @@ import { mediaDir, mediaRelPath } from './lib/media.ts';
 import { authRoutes } from './routes/auth.ts';
 import { exerciseRoutes } from './routes/exercises.ts';
 import { mediaRoutes } from './routes/media.ts';
-import { liveRoutes } from './routes/live.ts';
-import { pushRoutes } from './routes/push.ts';
-import { LiveSessions } from './live.ts';
-import { type PushSender, RestReminders, webPushSender } from './push.ts';
 import { syncRoutes } from './routes/sync.ts';
 
 const VERSION = '0.1.0';
 
-export interface AppDeps {
+interface AppDeps {
   config: Config;
   db: Db;
   ownerId: string;
   logger?: FastifyServerOptions['logger'];
-  // Tests replace the real Web Push delivery.
-  pushSender?: PushSender;
 }
 
-export async function buildApp({ config, db, ownerId, logger = false, pushSender }: AppDeps) {
+export async function buildApp({ config, db, ownerId, logger = false }: AppDeps) {
   const app = Fastify({ logger, trustProxy: config.trustProxy });
-  const reminders = new RestReminders(db, pushSender ?? webPushSender(db, config.pushSubject), app.log);
-  app.addHook('onClose', async () => reminders.stop());
-  const live = new LiveSessions();
   await app.register(rateLimit, { global: false });
 
   fs.mkdirSync(mediaDir(config.dataDir), { recursive: true });
@@ -53,14 +44,14 @@ export async function buildApp({ config, db, ownerId, logger = false, pushSender
   });
 
   if (config.staticDir) {
-    // The app itself. Its shell and service worker must always be revalidated so updates reach the
-    // phones; hashed assets never change.
+    // The app itself. Its shell must always be revalidated so updates show up; hashed assets never
+    // change. sw.js only removes the service worker of the former installable version.
     await app.register(fastifyStatic, {
       root: config.staticDir,
       decorateReply: false,
       setHeaders: (res, file) => {
         const name = path.basename(file);
-        if (name === 'index.html' || name === 'sw.js' || name.startsWith('workbox-') || name.endsWith('.webmanifest')) {
+        if (name === 'index.html' || name === 'sw.js') {
           res.header('cache-control', 'no-cache');
         } else if (file.includes(`${path.sep}assets${path.sep}`)) {
           res.header('cache-control', 'public, max-age=31536000, immutable');
@@ -82,8 +73,6 @@ export async function buildApp({ config, db, ownerId, logger = false, pushSender
       authRoutes(api, { db, config, ownerId });
       exerciseRoutes(api, { db });
       mediaRoutes(api, { db, config });
-      pushRoutes(api, { db, reminders });
-      liveRoutes(api, { db, live, reminders });
       syncRoutes(api, { db });
       api.get('/network', async (request): Promise<NetworkResponse> => ({
         location: ipInCidrs(request.ip, config.homeCidrs) ? 'home' : 'remote',

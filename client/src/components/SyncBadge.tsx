@@ -21,7 +21,7 @@ const TONE: Record<SyncState, 'ok' | 'wait' | 'bad'> = {
   error: 'bad',
 };
 
-// Short labels for cramped headers (live session on a phone).
+// Short labels for cramped headers (live session in a narrow window).
 const SHORT: Record<SyncState, string> = {
   idle: 'Synchro',
   syncing: 'Synchro…',

@@ -5,19 +5,19 @@ Athlos est un monorepo npm en trois paquets TypeScript :
 | Paquet | Contenu |
 | --- | --- |
 | `shared/` | Vocabulaire commun : sports, types d'exercice, muscles, schémas zod de l'API et de la synchro. |
-| `server/` | API Fastify, base SQLite (better-sqlite3 + Drizzle), médias (sharp, ffmpeg), Web Push. |
-| `client/` | PWA React + Vite, base locale IndexedDB (Dexie), service worker Workbox. |
+| `server/` | API Fastify, base SQLite (better-sqlite3 + Drizzle), médias (sharp, ffmpeg). |
+| `client/` | App web React + Vite, base locale IndexedDB (Dexie). |
 
 En production, une seule image Docker sert l'API et l'application compilée.
 
-## Hors-ligne d'abord
+## Données locales d'abord
 
-L'application ne lit et n'écrit **que** dans sa base locale IndexedDB. Rien n'attend le réseau : créer une
-séance, la faire, consulter l'historique fonctionne pareil avec ou sans connexion.
+L'application ne lit et n'écrit **que** dans sa base locale IndexedDB. Rien n'attend le réseau : une fois
+la page chargée, créer une séance, la faire, consulter l'historique continue de fonctionner si la connexion
+tombe, et les modifications partent au retour du réseau.
 
-- Le service worker met en cache l'application (précache Workbox) et les médias des exercices utilisés
-  dans tes séances. Toute la bibliothèque d'images peut être téléchargée depuis les Réglages.
-- Le stockage est demandé comme persistant (`navigator.storage.persist()`), pour éviter qu'iOS ne l'efface.
+- Le stockage est demandé comme persistant (`navigator.storage.persist()`), pour que le navigateur ne
+  l'efface pas quand l'espace manque.
 - La séance en cours est un état local à l'appareil. Les minuteurs sont des horodatages : ils survivent à
   la mise en veille de l'app.
 
@@ -70,7 +70,6 @@ idempotente.
 | `sessions`, `set_logs` | Séances réalisées et séries effectuées. |
 | `media` | Fichiers envoyés (identifiés par leur empreinte sha256). |
 | `user_settings` | Réglages partagés entre appareils (couleurs). |
-| `push_subscriptions` | Abonnements aux notifications, par appareil (jamais synchronisés). |
 | `programs` | Réservé pour la planification de cycles. |
 
 Choix faits pour pouvoir évoluer sans refonte : un `user_id` sur toutes les tables, un champ `sport` (la
@@ -91,27 +90,3 @@ Un seul utilisateur, protégé par un mot de passe dont seule l'empreinte scrypt
 (`APP_PASSWORD_HASH`). Chaque connexion crée un appareil avec son propre jeton, envoyé en
 `Authorization: Bearer`. Un appareil peut être déconnecté depuis les Réglages d'un autre. La connexion est
 limitée à 10 essais par minute.
-
-## Notification de fin de repos
-
-iOS ne laisse pas une app web en arrière-plan sonner ou vibrer. C'est donc le serveur qui prévient :
-
-1. L'appareil s'abonne une fois (Web Push, clés VAPID créées par le serveur et gardées en base).
-2. À chaque repos, l'app envoie `PUT /push/rest { inMs }` ; un nouveau repos remplace le précédent,
-   passer le repos l'annule.
-3. À l'échéance, le serveur envoie la notification au service d'Apple ou de Google, qui la remet au
-   téléphone, même verrouillé, et à la montre.
-
-Les rappels sont gardés en mémoire : un redémarrage du serveur pendant un repos ne fait perdre que ce
-rappel. Le bip local reste la solution hors réseau.
-
-## Valider la série depuis l'Apple Watch
-
-Sans app native, la montre passe par un Raccourci iOS qui appelle le serveur avec sa propre clé (un
-appareil révocable comme les autres).
-
-1. Pendant la séance, le téléphone publie les séries à venir (`PUT /live`), avec leur nom et leur repos.
-2. Le raccourci appelle `POST /live/actions`. Le serveur répond aussitôt en texte (« ✓ Série 1 · Squat —
-   Repos 2:00, puis Série 2 · Squat »), lance la notification de fin de repos et met l'action en file.
-3. L'app applique les actions en file dès qu'elle en est prévenue (`{"live":1}` sur le flux SSE) ou
-   quand elle revient au premier plan, avec l'heure exacte du toucher et les valeurs prévues pour la série.

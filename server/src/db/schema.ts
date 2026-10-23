@@ -34,19 +34,6 @@ export const devices = sqliteTable(
   (t) => [uniqueIndex('devices_token_hash').on(t.tokenHash)],
 );
 
-// Web Push subscription of a device (end-of-rest notifications). Server-side only, not synced.
-export const pushSubscriptions = sqliteTable(
-  'push_subscriptions',
-  {
-    endpoint: text('endpoint').primaryKey(),
-    deviceId: text('device_id').notNull().references(() => devices.id),
-    p256dh: text('p256dh').notNull(),
-    auth: text('auth').notNull(),
-    createdAt: integer('created_at').notNull(),
-  },
-  (t) => [index('push_subscriptions_device').on(t.deviceId)],
-);
-
 // Settings shared by all of a user's devices (device-only preferences never reach the server).
 export const userSettings = sqliteTable(
   'user_settings',

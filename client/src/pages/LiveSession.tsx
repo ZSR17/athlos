@@ -23,11 +23,9 @@ import {
   sessionLogs,
   updateLive,
 } from '../db/sessions.ts';
-import { beep, unlockAudio, useNow, useWakeLock, vibrate } from '../lib/feedback.ts';
-import { remindRestEnd } from '../lib/push.ts';
-import { endLive, publishLive } from '../lib/watch.ts';
+import { beep, unlockAudio, useNow } from '../lib/feedback.ts';
 import { formatDuration, formatKg, formatKm, formatSetValues, parseCount, parseDuration, parseKg, parseKm } from '../lib/format.ts';
-import { type SetValues, buildSteps, prefill, setCount, stepKey, stepLabel, targetFor, workingNumber } from '../lib/session.ts';
+import { type SetValues, buildSteps, prefill, setCount, stepKey, targetFor, workingNumber } from '../lib/session.ts';
 import { metricLabel, metricsFor } from '../lib/targets.ts';
 
 const count = (v: number | undefined) => (v === undefined ? '' : String(v));
@@ -48,7 +46,6 @@ export function LiveSession() {
   }, [live?.sessionId]);
   const now = useNow(250);
   const [finishing, setFinishing] = useState(false);
-  useWakeLock(!!live);
 
   const steps = useMemo(() => (live ? buildSteps(live.plan, live.extra) : []), [live]);
   const done = useMemo(() => doneKeys(logs ?? []), [logs]);
@@ -74,22 +71,6 @@ export function LiveSession() {
 
   const setNumber = (set: number) => (item ? workingNumber(item, set) : set + 1);
 
-  // End-of-rest notification: scheduled on the server whenever the rest starts or changes
-  // (+15 s, -15 s), cancelled when it is skipped or the session ends.
-  const restEndsAt = live?.restEndsAt ?? null;
-  const notified = useRef<number | null>(null);
-  useEffect(() => {
-    if (restEndsAt === notified.current) return;
-    notified.current = restEndsAt;
-    if (restEndsAt === null || restEndsAt <= Date.now()) return void remindRestEnd(null);
-    void remindRestEnd(restEndsAt - Date.now(), exercise && step && live ? stepLabel(live.plan, step, exercise.name) : undefined);
-  }, [restEndsAt]);
-
-  // The watch validates the sets to come: keep the server's list up to date.
-  useEffect(() => {
-    if (live && logs) void publishLive();
-  }, [live, logs]);
-
   // End of rest: beep once, then close the rest screen.
   const beeped = useRef<number | null>(null);
   const resting = !!live?.restEndsAt && now < live.restEndsAt;
@@ -97,7 +78,6 @@ export function LiveSession() {
     if (live?.restEndsAt && now >= live.restEndsAt && beeped.current !== live.restEndsAt) {
       beeped.current = live.restEndsAt;
       beep();
-      vibrate();
       void updateLive({ restEndsAt: null });
     }
   }, [now, live?.restEndsAt]);
@@ -128,8 +108,6 @@ export function LiveSession() {
     if (c !== -1) void updateLive({ cursor: c });
   };
   const finish = async () => {
-    void remindRestEnd(null);
-    endLive();
     const id = await finishSession();
     // With "sync at the end of the session" this is the moment everything goes.
     requestSync(0);
@@ -328,8 +306,6 @@ export function LiveSession() {
             className="btn btn-ghost btn-danger"
             onClick={async () => {
               if (confirm('Abandonner la séance ? Les séries validées seront supprimées.')) {
-                void remindRestEnd(null);
-                endLive();
                 await discardSession();
                 navigate('/');
               }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { beep, unlockAudio, useNow, vibrate } from '../lib/feedback.ts';
+import { beep, unlockAudio, useNow } from '../lib/feedback.ts';
 import { formatDuration } from '../lib/format.ts';
 import { Ring } from './Ring.tsx';
 
@@ -30,7 +30,6 @@ export function Chrono({ targetS, onChange }: { targetS: number | undefined; onC
       setStartedAt(null);
       onChange(targetS);
       beep();
-      vibrate();
     }
   }, [countdown, running, elapsedS, targetS, onChange]);
 

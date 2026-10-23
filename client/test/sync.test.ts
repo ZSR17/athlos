@@ -3,7 +3,6 @@ import { AthlosDb, type LocalExercise } from '../src/db/db.ts';
 import { startSession } from '../src/db/sessions.ts';
 import { addItem, createWorkout, updateWorkout } from '../src/db/workouts.ts';
 import { applyChanges, collectChanges, markPushed, syncNow, syncStatus } from '../src/sync/engine.ts';
-import { mediaCoverage, mediaStatus, precacheMedia } from '../src/sync/media.ts';
 import { syncSettings } from '../src/sync/settings.ts';
 
 let db: AthlosDb;
@@ -153,27 +152,6 @@ describe('sync engine', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 502 })));
     await syncNow({ db, force: true });
     expect(syncStatus.get().state).toBe('offline');
-  });
-
-  it('downloads the media of exercises used in workouts, once', async () => {
-    await db.exercises.update('squat', { mediaUrls: ['/media/a.webp', '/media/b.webp'] });
-    await db.exercises.add({ ...squat, id: 'plank', mediaUrls: ['/media/unused.webp'] });
-    await addItem(await createWorkout('Jambes', db), squat, db);
-    const stored = new Set<string>();
-    const add = vi.fn(async (url: string) => void stored.add(url));
-    const keys = async () => [...stored].map((u) => ({ url: `http://localhost${u}` }));
-    vi.stubGlobal('caches', { open: async () => ({ keys, add }) });
-
-    expect(await precacheMedia(db)).toBe(2);
-    expect([...stored]).toEqual(['/media/a.webp', '/media/b.webp']);
-    expect(mediaStatus.get()).toMatchObject({ running: false, done: 2, total: 2, failed: false });
-    expect(await precacheMedia(db)).toBe(0);
-    expect(add).toHaveBeenCalledTimes(2);
-
-    // The whole library on demand, and what the device holds.
-    expect(await mediaCoverage(db)).toEqual({ cached: 2, total: 3 });
-    expect(await precacheMedia(db, { all: true })).toBe(1);
-    expect(await mediaCoverage(db)).toEqual({ cached: 3, total: 3 });
   });
 
   it('reports download progress while several pages arrive', async () => {
