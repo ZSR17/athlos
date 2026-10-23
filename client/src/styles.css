@@ -567,6 +567,8 @@ h3 {
 .crop-box {
   display: flex;
   justify-content: center;
+  /* Never squeezed by the sheet: that cut the bottom of tall photos, handles included. */
+  flex-shrink: 0;
   padding: 8px;
   overflow: hidden;
   border-radius: var(--radius);

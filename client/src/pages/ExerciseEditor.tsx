@@ -1,3 +1,6 @@
+import { DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { type Crop, EQUIPMENT_LABELS, EXERCISE_TYPE_IDS, EXERCISE_TYPES, type ExerciseType, MUSCLE_IDS, MUSCLES, type MuscleId } from '@athlos/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
@@ -43,6 +46,47 @@ function mediaGroups(f: Pick<ExerciseFields, 'mediaIds' | 'mediaUrls'>) {
   return groups;
 }
 
+type MediaGroup = ReturnType<typeof mediaGroups>[number];
+
+// A photo or video of the exercise. With two photos, dragging one (or Space on it, then arrows) swaps
+// them: the first is the start of the movement, the second its end.
+function MediaTile({ group, label, onRemove }: { group: MediaGroup; label: string | null; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.ids[0]! });
+  const video = group.urls[0]!.endsWith('.mp4');
+  return (
+    <div
+      ref={setNodeRef}
+      className="media-tile"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        zIndex: isDragging ? 2 : undefined,
+        cursor: label ? (isDragging ? 'grabbing' : 'grab') : undefined,
+        touchAction: 'none',
+      }}
+      {...attributes}
+      {...listeners}
+      aria-roledescription="photo déplaçable"
+      aria-label={video ? 'Vidéo' : `Photo${label ? ` : ${label.toLowerCase()} du mouvement` : ''}`}
+    >
+      <img src={thumbUrl(group.urls)} alt="" draggable={false} />
+      {(video || label) && <span className="badge">{video ? 'Vidéo' : label}</span>}
+      <button
+        type="button"
+        className="remove"
+        aria-label="Retirer"
+        onClick={onRemove}
+        // The button's own presses, not a move of the tile.
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <Icon name="close" size={16} />
+      </button>
+    </div>
+  );
+}
+
 // Creates a custom exercise (/exercices/nouveau) or edits one (/exercices/:id/modifier).
 // Editing a built-in exercise keeps a personal version that can be reverted.
 export function ExerciseEditor() {
@@ -66,6 +110,10 @@ export function ExerciseEditor() {
   // Last photo or video removed, until it is put back or another one is added.
   const [removed, setRemoved] = useState<{ ids: string[]; urls: string[]; at: number } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   // Load once: later sync updates must not overwrite what is being typed.
   useEffect(() => {
@@ -104,6 +152,13 @@ export function ExerciseEditor() {
   const groups = mediaGroups(f);
   const hasVideo = f.mediaUrls.some((u) => u.endsWith('.mp4'));
   const photos = groups.length;
+  const onMediaMoved = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const ids = groups.map((g) => g.ids[0]);
+    const moved = arrayMove(groups, ids.indexOf(String(active.id)), ids.indexOf(String(over.id)));
+    setRemoved(null);
+    set({ mediaIds: moved.flatMap((g) => g.ids), mediaUrls: moved.flatMap((g) => g.urls) });
+  };
   const removeGroup = (g: { ids: string[]; urls: string[] }) => {
     setRemoved({ ...g, at: f.mediaIds.indexOf(g.ids[0]!) });
     set({
@@ -302,18 +357,22 @@ export function ExerciseEditor() {
       <section className="stack" style={{ gap: 8 }}>
         <h2 className="label">Photo, GIF ou vidéo</h2>
         <span className="small muted" style={{ lineHeight: 1.45 }}>
-          Une vidéo (15 s max, sans le son) ou deux photos, début et fin du mouvement, enchaînées en boucle.
+          Une vidéo (15 s max, sans le son) ou deux photos, début et fin du mouvement, enchaînées en boucle. Fais
+          glisser une photo pour changer leur ordre.
         </span>
         <div className="row wrap" style={{ gap: 10 }}>
-          {groups.map((g) => (
-            <div key={g.ids[0]} className="media-tile">
-              <img src={thumbUrl(g.urls)} alt="" />
-              {g.urls[0]!.endsWith('.mp4') && <span className="badge">Vidéo</span>}
-              <button type="button" className="remove" aria-label="Retirer" onClick={() => removeGroup(g)}>
-                <Icon name="close" size={16} />
-              </button>
-            </div>
-          ))}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onMediaMoved}>
+            <SortableContext items={groups.map((g) => g.ids[0]!)} strategy={horizontalListSortingStrategy}>
+              {groups.map((g, k) => (
+                <MediaTile
+                  key={g.ids[0]}
+                  group={g}
+                  label={photos === 2 && !hasVideo ? (k === 0 ? 'Début' : 'Fin') : null}
+                  onRemove={() => removeGroup(g)}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           {(hasVideo || photos < 2) && (
             <button
               type="button"

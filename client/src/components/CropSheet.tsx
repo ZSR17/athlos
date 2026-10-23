@@ -49,8 +49,8 @@ export function CropSheet({ src, onCancel, onConfirm }: { src: string; onCancel:
     return () => observer.disconnect();
   }, []);
 
-  // The whole picture, as large as the sheet allows (and no taller than most of the screen).
-  const scale = natural ? Math.min(room / natural.w, (innerHeight * 0.55) / natural.h) : 0;
+  // The whole picture, as large as the sheet allows, and short enough for the buttons to fit below.
+  const scale = natural ? Math.min(room / natural.w, (innerHeight * 0.5) / natural.h) : 0;
   const shownW = natural ? natural.w * scale : 0;
   const shownH = natural ? natural.h * scale : 0;
 
