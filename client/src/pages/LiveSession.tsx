@@ -1,3 +1,4 @@
+import type { SetTarget } from '@athlos/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -26,7 +27,7 @@ import {
 } from '../db/sessions.ts';
 import { beep, unlockAudio, useNow } from '../lib/feedback.ts';
 import { formatDuration, formatKg, formatKm, formatSetValues, parseCount, parseDuration, parseKg, parseKm } from '../lib/format.ts';
-import { type SetValues, buildSteps, prefill, setCount, stepKey, targetFor, workingNumber } from '../lib/session.ts';
+import { type SetValues, buildSteps, prefill, raised, setCount, stepKey, targetFor, workingNumber } from '../lib/session.ts';
 import { metricLabel, metricsFor } from '../lib/targets.ts';
 
 const count = (v: number | undefined) => (v === undefined ? '' : String(v));
@@ -62,9 +63,12 @@ export function LiveSession() {
   const [draft, setDraft] = useState<SetValues>({});
   const draftKey = live && step ? stepKey(live.plan, step) : '';
   const loggedForStep = logs?.find((l) => `${l.workoutItemId}:${l.setIndex}` === draftKey);
+  // What a set starts with: last time's values (else the plan), plus the increases made on earlier sets.
+  const startValues = (set: number, target: SetTarget) => raised(prefill(target, previous?.get(set)), live?.bumps?.[`${item?.itemId}:${set}`]);
+  const startedFrom = step ? (loggedForStep ?? startValues(step.set, step.target)) : {};
   useEffect(() => {
     if (!step) return;
-    setDraft(loggedForStep ?? prefill(step.target, previous?.get(step.set)));
+    setDraft(startedFrom);
     // Only when the set changes: re-running on every log update would wipe what is being typed.
   }, [draftKey, previous]);
   const setField = useCallback((key: keyof SetValues, v: number) => setDraft((d) => (d[key] === v ? d : { ...d, [key]: v })), []);
@@ -104,7 +108,7 @@ export function LiveSession() {
   const validate = async () => {
     if (!step) return;
     unlockAudio();
-    await logSet(live, live.cursor, draft);
+    await logSet(live, live.cursor, draft, undefined, startedFrom);
   };
   const goToItem = (index: number) => {
     const c = cursorForItem(live, steps, done, index);
@@ -219,7 +223,7 @@ export function LiveSession() {
                     </span>
                     <span className="small muted ellipsis">{prev ? formatSetValues(type, prev) : '—'}</span>
                     <span className="num ellipsis" style={{ fontSize: 18 }}>
-                      {formatSetValues(type, log ?? (isCurrent ? draft : prefill(target, prev)))}
+                      {formatSetValues(type, log ?? (isCurrent ? draft : startValues(set, target)))}
                     </span>
                     <span className={`check${log ? ' on' : ''}`} aria-label={log ? 'Série validée' : 'Série à faire'}>
                       {log && <Icon name="check" size={16} strokeWidth={3} />}

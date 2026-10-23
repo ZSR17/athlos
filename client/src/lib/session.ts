@@ -83,6 +83,27 @@ export function prefill(target: SetTarget, previous: SetValues | undefined): Set
   return { reps: src.reps ?? target.reps, weightG: src.weightG ?? target.weightG, durationS: src.durationS ?? target.durationS, distanceM: src.distanceM ?? target.distanceM };
 }
 
+const VALUE_KEYS = ['reps', 'weightG', 'durationS', 'distanceM'] as const;
+
+// What `done` adds to `from`, field by field; decreases are ignored (a set missed out of fatigue
+// must not lower the next ones).
+export function increase(done: SetValues, from: SetValues): SetValues {
+  const result: SetValues = {};
+  for (const k of VALUE_KEYS) {
+    const d = (done[k] ?? 0) - (from[k] ?? 0);
+    if (done[k] !== undefined && from[k] !== undefined && d > 0) result[k] = d;
+  }
+  return result;
+}
+
+// `v` raised by `bump` (an increase made on an earlier set of the session).
+export function raised(v: SetValues, bump: SetValues | undefined): SetValues {
+  if (!bump) return v;
+  const result = { ...v };
+  for (const k of VALUE_KEYS) if (bump[k] !== undefined) result[k] = (v[k] ?? 0) + bump[k];
+  return result;
+}
+
 // Epley estimate, only meaningful for reasonably low reps.
 export function estimate1RM(weightG: number, reps: number): number {
   if (reps <= 0) return 0;

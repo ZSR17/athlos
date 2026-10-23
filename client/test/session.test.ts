@@ -12,7 +12,7 @@ import {
 } from '../src/db/sessions.ts';
 import { addItem, createWorkout, deleteWorkout, liveItems, toggleSupersetWithNext, updateItem } from '../src/db/workouts.ts';
 import { metricsForType, recordFor } from '../src/lib/progress.ts';
-import { type PlanItem, buildSteps, estimate1RM, nextOpenStep, prefill, restAfter } from '../src/lib/session.ts';
+import { type PlanItem, buildSteps, estimate1RM, increase, nextOpenStep, prefill, raised, restAfter } from '../src/lib/session.ts';
 
 const plan = (items: Partial<PlanItem>[]): PlanItem[] =>
   items.map((p, k) => ({
@@ -231,6 +231,28 @@ describe('session flow', () => {
     const other = await createWorkout('Autre', db);
     await addItem(other, squat, db);
     expect((await liveItems(db, other))[0]!.targets).toEqual(first!.targets.map((t) => ({ ...t, restS: 150 })));
+  });
+
+  it('carries an increase to the following sets of the exercise', async () => {
+    const w = await createWorkout('Jambes', db);
+    await addItem(w, squat, db);
+    const [item] = await liveItems(db, w);
+    await updateItem(item!.id, { targets: sets(3).map((t) => ({ ...t, weightG: 80000 })) }, db);
+    await startSession(w, db);
+    const offered = { reps: 8, weightG: 80000 };
+
+    let live = (await getLive(db))!;
+    await logSet(live, 0, { reps: 8, weightG: 82500 }, db, offered);
+    live = (await getLive(db))!;
+    expect(live.bumps).toEqual({ [`${item!.id}:1`]: { weightG: 2500 }, [`${item!.id}:2`]: { weightG: 2500 } });
+
+    // Offered 82.5 kg x 8, done 85 kg x 9: both increases add up for the last set.
+    await logSet(live, 1, { reps: 9, weightG: 85000 }, db, raised(offered, live.bumps![`${item!.id}:1`]));
+    live = (await getLive(db))!;
+    expect(live.bumps![`${item!.id}:2`]).toEqual({ weightG: 5000, reps: 1 });
+
+    // A decrease is not carried.
+    expect(increase({ reps: 6, weightG: 80000 }, offered)).toEqual({});
   });
 
   it('discards a session without any set', async () => {

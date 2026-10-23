@@ -1,4 +1,4 @@
-import { type PlanItem, type SetValues, type Step, buildSteps, nextOpenStep, restAfter, stepKey } from '../lib/session.ts';
+import { type PlanItem, type SetValues, type Step, buildSteps, increase, nextOpenStep, raised, restAfter, setCount, stepKey } from '../lib/session.ts';
 import { type DoneSets, doneSets, rankKey, withDone } from '../lib/targets.ts';
 import { type LocalSession, type LocalSetLog, type AthlosDb, db as defaultDb } from './db.ts';
 import { liveItems } from './workouts.ts';
@@ -13,6 +13,8 @@ export interface LiveState {
   cursor: number;
   restEndsAt: number | null;
   restTotalS: number;
+  // Increases made on a set, carried to the following sets of the same exercise, by stepKey.
+  bumps?: Record<string, SetValues>;
 }
 
 const LIVE = 'live';
@@ -76,8 +78,15 @@ export function doneKeys(logs: LocalSetLog[]): Set<string> {
   return new Set(logs.map((l) => `${l.workoutItemId}:${l.setIndex}`));
 }
 
-// Records a performed set, then moves to the next open set and starts the rest timer.
-export async function logSet(live: LiveState, stepIndex: number, values: SetValues, db: AthlosDb = defaultDb) {
+// Records a performed set, then moves to the next open set and starts the rest timer. `startedFrom`:
+// the values the set was offered with; what was added to them is added to the following sets too.
+export async function logSet(
+  live: LiveState,
+  stepIndex: number,
+  values: SetValues,
+  db: AthlosDb = defaultDb,
+  startedFrom?: SetValues,
+) {
   const steps = buildSteps(live.plan, live.extra);
   const step = steps[stepIndex];
   if (!step) return;
@@ -106,8 +115,17 @@ export async function logSet(live: LiveState, stepIndex: number, values: SetValu
     const done = doneKeys(await sessionLogs(live.sessionId, db));
     const rest = restAfter(live.plan, steps, stepIndex);
     const next = nextOpenStep(live.plan, steps, done, stepIndex);
+    const bumps = { ...live.bumps };
+    const added = startedFrom ? increase(values, startedFrom) : {};
+    if (Object.keys(added).length) {
+      for (let set = step.set + 1; set < setCount(live.plan, live.extra, step.item); set++) {
+        const key = `${item.itemId}:${set}`;
+        bumps[key] = raised(bumps[key] ?? {}, added);
+      }
+    }
     await saveLive(db, {
       ...live,
+      bumps,
       cursor: next === -1 ? stepIndex : next,
       restEndsAt: rest > 0 && next !== -1 ? t + rest * 1000 : null,
       restTotalS: rest,
