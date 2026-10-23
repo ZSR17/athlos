@@ -165,8 +165,10 @@ async function updatePlans(db: AthlosDb, plan: PlanItem[], logs: LocalSetLog[]) 
   for (const item of items) {
     const source = done.get(item.id) ?? done.get(byExercise.get(item.exerciseId)!);
     if (item.deleted || !source || (await db.workouts.get(item.workoutId))?.deleted) continue;
-    const targets = withDone(item.targets, item.mode, source);
-    if (JSON.stringify(targets) !== JSON.stringify(item.targets)) await db.workoutItems.update(item.id, { targets, ...touched() });
+    const { mode, targets } = withDone(item.targets, item.mode, source);
+    if (mode !== item.mode || JSON.stringify(targets) !== JSON.stringify(item.targets)) {
+      await db.workoutItems.update(item.id, { mode, targets, ...touched() });
+    }
   }
 }
 

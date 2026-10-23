@@ -73,29 +73,35 @@ export function rankKey(sets: Pick<SetTarget, 'kind'>[], index: number): string 
   return `${warmup}:${sets.slice(0, index).filter((t) => (t.kind === 'warmup') === warmup).length}`;
 }
 
-// What was done for an exercise: values by rankKey, and the first working set as the model of
-// identical sets. `sets` in set order, each with its rankKey in the plan it was done from.
+// What was done for an exercise: values by rankKey, and whether all working sets were done the same
+// way (then `model` holds those values). `sets` in set order, each with its rankKey in the plan it
+// was done from.
 export interface DoneSets {
   values: Map<string, Values>;
   model: Values | undefined;
 }
 
 export function doneSets(sets: { key: string; set: Pick<SetTarget, 'kind'> & Values }[]): DoneSets {
-  const firstWorking = sets.find((s) => s.set.kind !== 'warmup');
+  const working = sets.filter((s) => s.set.kind !== 'warmup').map((s) => JSON.stringify(doneValues(s.set)));
   return {
     values: new Map(sets.map((s) => [s.key, doneValues(s.set)])),
-    model: firstWorking && doneValues(firstWorking.set),
+    model: working.length && working.every((w) => w === working[0]) ? JSON.parse(working[0]!) : undefined,
   };
 }
 
-// A plan with the values done. Only planned sets change (extra sets are not added); in simple mode
-// the model applies to every set.
-export function withDone(targets: SetTarget[], mode: ItemMode, done: DoneSets): SetTarget[] {
-  if (mode === 'simple') return done.model ? updateAll(targets, done.model) : targets;
-  return targets.map((t, i) => {
-    const values = done.values.get(rankKey(targets, i));
-    return values ? { ...t, ...values } : t;
-  });
+// A plan with the values done; only planned sets change (extra sets are not added). Identical sets
+// (simple mode) stay identical when every working set was done the same way; otherwise they become
+// per-set so each one keeps what was done.
+export function withDone(targets: SetTarget[], mode: ItemMode, done: DoneSets): { mode: ItemMode; targets: SetTarget[] } {
+  if (mode === 'simple' && done.model) return { mode, targets: updateAll(targets, done.model) };
+  if (mode === 'simple' && done.values.size === 0) return { mode, targets };
+  return {
+    mode: 'per_set',
+    targets: targets.map((t, i) => {
+      const values = done.values.get(rankKey(targets, i));
+      return values ? { ...t, ...values } : t;
+    }),
+  };
 }
 
 export function removeSet(targets: SetTarget[], index: number): SetTarget[] {

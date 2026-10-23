@@ -79,7 +79,7 @@ async function startingPlan(exercise: LocalExercise, db: AthlosDb): Promise<{ mo
   }
   const history = await exerciseHistory(exercise.id, db);
   const last = history[history.length - 1]?.sets ?? [];
-  if (base) return { mode: base.mode, targets: withDone(base.targets, base.mode, doneSets(last.map((l, i) => ({ key: rankKey(last, i), set: l })))) };
+  if (base) return withDone(base.targets, base.mode, doneSets(last.map((l, i) => ({ key: rankKey(last, i), set: l }))));
   if (last.length) {
     const restS = defaultTargets(exercise.exerciseType)[0]!.restS;
     const targets = last.map((l) => ({ kind: l.kind, ...doneValues(l), restS }));

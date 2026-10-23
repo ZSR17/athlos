@@ -154,11 +154,27 @@ describe('session flow', () => {
     await finishSession(db);
 
     const [a, b] = await liveItems(db, w);
-    // Simple mode: the first set done is the model of all sets, rest unchanged.
-    expect(a!.targets).toEqual(Array.from({ length: 3 }, () => ({ kind: 'normal', reps: 10, weightG: 82500, restS: 90 })));
+    // Identical sets done differently: each set keeps what was done, the set not done keeps its plan.
+    expect(a!.mode).toBe('per_set');
+    expect(a!.targets.map((t) => [t.weightG, t.reps, t.restS])).toEqual([
+      [82500, 10, 90],
+      [85000, 9, 90],
+      [80000, 8, 90],
+    ]);
     // Per set: only the sets done change.
     expect(b!.targets.map((t) => t.durationS)).toEqual([45, 30]);
     expect(b!.dirty).toBe(1);
+  });
+
+  it('keeps identical sets identical when they were all done the same way', async () => {
+    const w = await createWorkout('Jambes', db);
+    await addItem(w, squat, db);
+    const [item] = await liveItems(db, w);
+    await updateItem(item!.id, { mode: 'simple', targets: sets(3).map((t) => ({ ...t, weightG: 80000 })) }, db);
+    await doSession(w, [85000, 85000]);
+    const [after] = await liveItems(db, w);
+    expect(after!.mode).toBe('simple');
+    expect(after!.targets).toEqual(Array.from({ length: 3 }, () => ({ kind: 'normal', reps: 8, weightG: 85000, restS: 90 })));
   });
 
   it('updates every workout planning the same exercise', async () => {
