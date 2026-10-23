@@ -546,7 +546,13 @@ h3 {
   inset: 0;
   width: 100%;
   height: 100%;
+  object-fit: contain;
+}
+/* Pictures are shown whole (any shape, as framed when added) over a blurred copy filling the frame. */
+.media .media-backdrop {
   object-fit: cover;
+  filter: blur(24px) brightness(0.6);
+  transform: scale(1.15);
 }
 /* Exercise without photo or video. */
 .media-empty {
@@ -557,27 +563,84 @@ h3 {
 .media .frame-b {
   animation: frame-b 2.2s infinite ease-in-out;
 }
-/* Frame of the photo being cropped: same 3:2 shape as the exercise pictures. */
-.crop-frame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 3 / 2;
+/* Photo being cropped: the whole picture, the part kept in a frame, the rest darkened. */
+.crop-box {
+  display: flex;
+  justify-content: center;
+  padding: 8px;
   overflow: hidden;
   border-radius: var(--radius);
   background: var(--surface2);
-  cursor: grab;
+}
+.crop-stage {
+  position: relative;
   touch-action: none;
-  display: grid;
-  place-items: center;
-}
-.crop-frame:active {
-  cursor: grabbing;
-}
-.crop-frame img {
-  position: absolute;
-  max-width: none;
-  pointer-events: none;
   user-select: none;
+}
+.crop-stage img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.crop-selection {
+  position: absolute;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.55);
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+  cursor: move;
+}
+.crop-selection:focus-visible {
+  outline-width: 3px;
+  outline-offset: 0;
+}
+.crop-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+.crop-handle.nw {
+  left: 0;
+  top: 0;
+  cursor: nwse-resize;
+}
+.crop-handle.n {
+  left: 50%;
+  top: 0;
+  cursor: ns-resize;
+}
+.crop-handle.ne {
+  left: 100%;
+  top: 0;
+  cursor: nesw-resize;
+}
+.crop-handle.e {
+  left: 100%;
+  top: 50%;
+  cursor: ew-resize;
+}
+.crop-handle.se {
+  left: 100%;
+  top: 100%;
+  cursor: nwse-resize;
+}
+.crop-handle.s {
+  left: 50%;
+  top: 100%;
+  cursor: ns-resize;
+}
+.crop-handle.sw {
+  left: 0;
+  top: 100%;
+  cursor: nesw-resize;
+}
+.crop-handle.w {
+  left: 0;
+  top: 50%;
+  cursor: ew-resize;
 }
 /* Movement shown next to a hovered exercise of the picker (above the sheet it is in). */
 .exercise-preview {

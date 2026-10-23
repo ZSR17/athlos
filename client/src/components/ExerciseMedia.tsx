@@ -9,6 +9,7 @@ export function thumbUrl(urls: string[]): string | undefined {
 
 // Built-in exercises have a start and an end photo: cross-fading them gives a GIF-like loop
 // without storing an animation. Custom videos (and GIFs, converted to video) loop silently.
+// Shown whole, whatever their shape, over a blurred copy that fills the frame.
 export function ExerciseMedia({
   urls,
   name,
@@ -26,6 +27,7 @@ export function ExerciseMedia({
   const [a, b] = urls;
   return (
     <div className={`media ${className}`} style={style}>
+      {thumbUrl(urls) && <img className="media-backdrop" src={thumbUrl(urls)} alt="" aria-hidden="true" />}
       {video ? (
         <video src={video} poster={thumbUrl(urls)} autoPlay muted loop playsInline aria-label={name} />
       ) : (
