@@ -35,7 +35,7 @@ export function ExerciseDetail() {
           to="/exercices"
           className="icon-btn"
           aria-label="Retour"
-          style={{ position: 'absolute', top: 'max(14px, var(--top-clear))', left: 16, background: 'rgb(14 16 18 / .7)', color: '#fff' }}
+          style={{ position: 'absolute', top: 14, left: 16, background: 'rgb(14 16 18 / .7)', color: '#fff' }}
         >
           <Icon name="back" />
         </Link>
@@ -43,7 +43,7 @@ export function ExerciseDetail() {
           to={`/exercices/${exercise.id}/modifier`}
           className="icon-btn"
           aria-label="Modifier l’exercice"
-          style={{ position: 'absolute', top: 'max(14px, var(--top-clear))', right: 16, background: 'rgb(14 16 18 / .7)', color: '#fff' }}
+          style={{ position: 'absolute', top: 14, right: 16, background: 'rgb(14 16 18 / .7)', color: '#fff' }}
         >
           <Icon name="pencil" />
         </Link>
