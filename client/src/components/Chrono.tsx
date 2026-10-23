@@ -3,12 +3,14 @@ import { beep, unlockAudio, useNow } from '../lib/feedback.ts';
 import { formatDuration } from '../lib/format.ts';
 import { Ring } from './Ring.tsx';
 
-// Countdown to the planned duration, or a free stopwatch. Reports the elapsed seconds to the
-// parent while running so "Valider" always records what was actually held.
-export function Chrono({ targetS, onChange }: { targetS: number | undefined; onChange: (seconds: number) => void }) {
-  const [mode, setMode] = useState<'countdown' | 'stopwatch'>(targetS ? 'countdown' : 'stopwatch');
+// Countdown to the set's duration, or a free stopwatch. Reports the elapsed seconds to the parent
+// while running so "Valider" always records what was actually held. Until it starts, the countdown
+// follows `targetS` (the value shown for the set, adjustable with −/+); then it stays fixed.
+export function Chrono({ targetS: shownTargetS, onChange }: { targetS: number | undefined; onChange: (seconds: number) => void }) {
+  const [chosenMode, setMode] = useState<'countdown' | 'stopwatch' | null>(null);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [accMs, setAccMs] = useState(0);
+  const [fixedS, setFixedS] = useState<number | undefined>(undefined);
   const now = useNow(200);
   const finished = useRef(false);
 
@@ -16,6 +18,9 @@ export function Chrono({ targetS, onChange }: { targetS: number | undefined; onC
   // `now` ticks every 200 ms and can lag the moment the chrono started: never count negative time.
   const elapsedMs = accMs + (running ? Math.max(0, now - startedAt) : 0);
   const elapsedS = Math.floor(elapsedMs / 1000);
+  const started = running || elapsedMs > 0;
+  const targetS = started ? fixedS : shownTargetS;
+  const mode = chosenMode ?? (targetS ? 'countdown' : 'stopwatch');
   const countdown = mode === 'countdown' && !!targetS;
   const shownS = countdown ? Math.max(0, targetS - elapsedS) : elapsedS;
   const progress = countdown ? Math.min(1, elapsedMs / (targetS * 1000)) : (elapsedMs % 60000) / 60000;
@@ -41,14 +46,18 @@ export function Chrono({ targetS, onChange }: { targetS: number | undefined; onC
       setStartedAt(null);
     } else {
       finished.current = false;
+      if (!started) setFixedS(shownTargetS);
       if (countdown && elapsedS >= targetS) setAccMs(0);
       setStartedAt(Date.now());
     }
   };
+  // Back to the duration the set had before the chrono overwrote it with the elapsed time.
   const reset = () => {
     finished.current = false;
     setStartedAt(null);
     setAccMs(0);
+    if (fixedS !== undefined) onChange(fixedS);
+    setFixedS(undefined);
   };
 
   return (

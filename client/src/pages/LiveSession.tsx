@@ -230,7 +230,7 @@ export function LiveSession() {
               </button>
             </div>
 
-            {metrics.includes('duration') && <Chrono key={draftKey} targetS={step.target.durationS} onChange={setDuration} />}
+            {metrics.includes('duration') && <Chrono key={draftKey} targetS={draft.durationS} onChange={setDuration} />}
 
             <div className="steppers">
               {metrics.includes('weight') && (
