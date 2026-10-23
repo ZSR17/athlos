@@ -10,7 +10,7 @@ import { BackupError, downloadBackup, exportData, importData } from '../lib/back
 import { onColor, tooSimilar } from '../lib/color.ts';
 import { soundSettings, testBeep, useNow } from '../lib/feedback.ts';
 import { formatBytes } from '../lib/format.ts';
-import { type SyncState, enableSharedAppearance, syncNow, syncStatus } from '../sync/engine.ts';
+import { type SyncState, enableSharedAppearance, syncStatus } from '../sync/engine.ts';
 import { syncSettings } from '../sync/settings.ts';
 
 const STATUS: Record<SyncState, string> = {
@@ -79,7 +79,6 @@ function SoundSection() {
 function SyncSection() {
   const status = syncStatus.use();
   const now = useNow(15_000);
-  const busy = status.state === 'syncing';
   return (
     <section className="stack">
       <h2 className="section-title">Synchronisation</h2>
@@ -101,9 +100,6 @@ function SyncSection() {
             {status.rejected} élément{status.rejected > 1 ? 's' : ''} refusé{status.rejected > 1 ? 's' : ''} par le serveur : ils restent sur cet appareil.
           </p>
         )}
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={() => syncNow()}>
-          {busy ? 'Synchronisation…' : 'Synchroniser maintenant'}
-        </button>
       </div>
     </section>
   );
