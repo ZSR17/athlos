@@ -12,6 +12,7 @@ import {
   UploadError,
   createExercise,
   deleteExercise,
+  importMediaFromUrl,
   resetExercise,
   updateExercise,
   uploadMedia,
@@ -51,6 +52,9 @@ export function ExerciseEditor() {
   const [steps, setSteps] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [link, setLink] = useState('');
+  // Last photo or video removed, until it is put back or another one is added.
+  const [removed, setRemoved] = useState<{ ids: string[]; urls: string[]; at: number } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   // Load once: later sync updates must not overwrite what is being typed.
@@ -90,28 +94,46 @@ export function ExerciseEditor() {
   const groups = mediaGroups(f);
   const hasVideo = f.mediaUrls.some((u) => u.endsWith('.mp4'));
   const photos = groups.length;
-  const removeGroup = (g: { ids: string[] }) =>
+  const removeGroup = (g: { ids: string[]; urls: string[] }) => {
+    setRemoved({ ...g, at: f.mediaIds.indexOf(g.ids[0]!) });
     set({
       mediaIds: f.mediaIds.filter((x) => !g.ids.includes(x)),
       mediaUrls: f.mediaUrls.filter((_, i) => !g.ids.includes(f.mediaIds[i]!)),
     });
+  };
+  const undoRemove = () => {
+    if (!removed) return;
+    const putBack = (list: string[], items: string[]) => [...list.slice(0, removed.at), ...items, ...list.slice(removed.at)];
+    set({ mediaIds: putBack(f.mediaIds, removed.ids), mediaUrls: putBack(f.mediaUrls, removed.urls) });
+    setRemoved(null);
+  };
 
-  const onFile = async (file: File | undefined) => {
-    if (!file) return;
+  // Sends a file or a link to the server, then adds what it kept: one video, or up to two photos
+  // (start and end position, shown in a loop).
+  const addMedia = async (message: string, send: () => Promise<{ ids: string[]; urls: string[] }>) => {
     setError(null);
-    setBusy(file.type.startsWith('video/') || file.type === 'image/gif' ? 'Envoi et conversion de la vidéo…' : 'Envoi de la photo…');
+    setBusy(message);
     try {
-      const res = await uploadMedia(file);
-      const isVideo = res.ids.length === 2;
-      // One video, or up to two photos (start and end position, shown in a loop).
-      if (isVideo || hasVideo) set({ mediaIds: res.ids, mediaUrls: res.urls });
+      const res = await send();
+      setRemoved(null);
+      if (res.ids.length === 2 || hasVideo) set({ mediaIds: res.ids, mediaUrls: res.urls });
       else set({ mediaIds: [...f.mediaIds, ...res.ids].slice(-2), mediaUrls: [...f.mediaUrls, ...res.urls].slice(-2) });
+      return true;
     } catch (err) {
       setError(err instanceof UploadError ? err.message : 'Envoi impossible.');
+      return false;
     } finally {
       setBusy(null);
-      if (fileInput.current) fileInput.current.value = '';
     }
+  };
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    const video = file.type.startsWith('video/') || file.type === 'image/gif';
+    await addMedia(video ? 'Envoi et conversion de la vidéo…' : 'Envoi de la photo…', () => uploadMedia(file));
+    if (fileInput.current) fileInput.current.value = '';
+  };
+  const onLink = async () => {
+    if (link.trim() && (await addMedia('Import de l’image…', () => importMediaFromUrl(link.trim())))) setLink('');
   };
 
   const save = async (e: FormEvent) => {
@@ -269,6 +291,34 @@ export function ExerciseEditor() {
               <Icon name="plus" size={24} />
             </button>
           )}
+        </div>
+        {removed && (
+          <div className="row" role="status" style={{ gap: 10 }}>
+            <span className="small muted grow">{removed.urls[0]!.endsWith('.mp4') ? 'Vidéo retirée.' : 'Photo retirée.'}</span>
+            <button type="button" className="btn" onClick={undoRemove}>
+              Annuler
+            </button>
+          </div>
+        )}
+        <div className="row" style={{ gap: 8 }}>
+          <input
+            className="input grow"
+            type="url"
+            value={link}
+            onChange={(e) => setLink(e.target.value)}
+            onKeyDown={(e) => {
+              // Enter imports the image instead of saving the whole exercise.
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              void onLink();
+            }}
+            placeholder="Ou colle le lien d’une image"
+            aria-label="Lien d’une image sur Internet"
+            disabled={!!busy}
+          />
+          <button type="button" className="btn" disabled={!!busy || !link.trim()} onClick={() => void onLink()}>
+            Importer
+          </button>
         </div>
         <input
           ref={fileInput}

@@ -26,7 +26,8 @@ Pas de compte, pas de publicité, pas de service tiers : tes données restent ch
 **Bibliothèque**
 - 876 exercices en français, avec images, consignes et muscles travaillés sur une silhouette anatomique.
 - Filtres par groupe musculaire et recherche par nom.
-- Tes propres exercices, avec photo, vidéo ou GIF (convertis automatiquement pour rester légers).
+- Tes propres exercices, avec photo, vidéo ou GIF (convertis automatiquement pour rester légers), ou une image
+  importée depuis un lien Internet et gardée sur ton serveur.
 - Ta version d'un exercice de la bibliothèque (nom, muscles, médias), rétablissable à tout moment.
 
 **Séances**

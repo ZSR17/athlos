@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { nextRev } from '../src/db/index.ts';
 import { exercises, media } from '../src/db/schema.ts';
 import { mediaDir, mediaRelPath, storeImage } from '../src/lib/media.ts';
@@ -11,6 +11,7 @@ import { TEST_PASSWORD, makeTestApp, tempDir } from './helpers.ts';
 
 let ctx: Awaited<ReturnType<typeof makeTestApp>>;
 afterEach(async () => {
+  vi.unstubAllGlobals();
   await ctx.cleanup();
 });
 
@@ -48,6 +49,37 @@ describe('media', () => {
     // Same picture again: stored once.
     expect((await upload(headers, jpg, 'image/jpeg')).json().ids).toEqual(ids);
     expect(ctx.db.select().from(media).all()).toHaveLength(1);
+  });
+
+  it('stores a picture from a link, and refuses links to private addresses', async () => {
+    const headers = await start();
+    const png = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#ff4d2e' } }).png().toBuffer();
+    // Stand-in for the remote site; an IP address avoids a DNS lookup.
+    const remote = vi.fn(async (url: URL) => {
+      if (url.pathname === '/photo.png') return new Response(png, { headers: { 'content-type': 'image/png' } });
+      if (url.pathname === '/page') return new Response('<html>', { headers: { 'content-type': 'text/html' } });
+      if (url.pathname === '/moved') return new Response(null, { status: 302, headers: { location: 'http://127.0.0.1/secret.png' } });
+      return new Response('nope', { status: 404 });
+    });
+    vi.stubGlobal('fetch', remote);
+    const fromUrl = (url: string) => ctx.app.inject({ method: 'POST', url: '/api/v1/media/from-url', headers, payload: { url } });
+
+    const ok = await fromUrl('https://93.184.216.34/photo.png');
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().urls).toEqual([`/media/${ok.json().ids[0]}.webp`]);
+    expect(ctx.db.select().from(media).get()).toMatchObject({ mime: 'image/webp', width: 480, height: 360 });
+
+    expect((await fromUrl('https://93.184.216.34/page')).statusCode).toBe(415);
+    expect((await fromUrl('https://93.184.216.34/missing.png')).statusCode).toBe(502);
+    expect((await fromUrl('ftp://93.184.216.34/photo.png')).statusCode).toBe(400);
+    expect((await fromUrl('pas une adresse')).statusCode).toBe(400);
+    // Private networks, directly or through a redirect, are never fetched.
+    const calls = remote.mock.calls.length;
+    expect((await fromUrl('http://192.168.1.1/photo.png')).statusCode).toBe(400);
+    expect((await fromUrl('http://[::1]/photo.png')).statusCode).toBe(400);
+    expect(remote.mock.calls.length).toBe(calls);
+    expect((await fromUrl('https://93.184.216.34/moved')).statusCode).toBe(400);
+    expect(remote.mock.calls.map(([u]) => String(u))).not.toContain('http://127.0.0.1/secret.png');
   });
 
   it('refuses files that are not photos or videos', async () => {

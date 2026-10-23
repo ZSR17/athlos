@@ -63,6 +63,24 @@ const UPLOAD_ERRORS: Record<number, string> = {
   503: 'Le serveur ne sait pas encore convertir les vidéos.',
 };
 
+const LINK_ERRORS: Record<number, string> = {
+  400: 'Lien invalide : colle l’adresse complète d’une image (https://…).',
+  413: 'Image trop lourde (20 Mo maximum).',
+  415: 'Ce lien ne mène pas à une image : ouvre l’image seule, puis copie son adresse.',
+  502: 'Image introuvable à cette adresse.',
+  503: UPLOAD_ERRORS[503]!,
+};
+
+// Asks the server to download a picture from a link and keep it, like an uploaded photo.
+export async function importMediaFromUrl(url: string): Promise<UploadResponse> {
+  try {
+    return await api<UploadResponse>('/media/from-url', { method: 'POST', body: JSON.stringify({ url }) });
+  } catch (err) {
+    if (err instanceof ApiError) throw new UploadError(LINK_ERRORS[err.status] ?? 'Import refusé par le serveur.');
+    throw new UploadError('Serveur injoignable : il faut être connecté pour importer une image.');
+  }
+}
+
 // Sends a photo, GIF or video to the server, which compresses it.
 export async function uploadMedia(file: File): Promise<UploadResponse> {
   if (file.size > MAX_UPLOAD_BYTES) throw new UploadError(UPLOAD_ERRORS[413]);

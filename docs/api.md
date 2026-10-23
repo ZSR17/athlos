@@ -34,4 +34,5 @@ Le fonctionnement de la synchro est décrit dans [architecture.md](architecture.
 | Route | Rôle |
 | --- | --- |
 | `POST /api/v1/media` | Corps = le fichier, `Content-Type` = son type (`image/*` ou `video/*`), 100 Mo max. Renvoie `{ ids, urls }`. 415 si le type n'est pas pris en charge, 503 si ffmpeg est absent. |
+| `POST /api/v1/media/from-url` `{ url }` | Le serveur télécharge l'image du lien (http/https, 20 Mo max) et la garde comme un envoi. 400 si le lien est invalide ou vise une adresse privée (aussi après redirection), 415 si ce n'est pas une image, 502 si elle est introuvable. |
 | `GET /media/<sha256>.webp\|mp4` | Le fichier, mis en cache définitivement. Public pour que les balises `<img>` et `<video>` fonctionnent ; les noms ne se devinent pas. |
