@@ -59,6 +59,45 @@ export function addSet(targets: SetTarget[], type: ExerciseType): SetTarget[] {
   return [...targets, last ? { ...last, kind: 'normal' } : defaultTargets(type)[0]!];
 }
 
+type Values = Pick<SetTarget, 'reps' | 'weightG' | 'durationS' | 'distanceM'>;
+
+// Values done in a set, without the empty ones.
+export function doneValues(set: Values): Values {
+  return Object.fromEntries((['reps', 'weightG', 'durationS', 'distanceM'] as const).filter((k) => set[k] != null).map((k) => [k, set[k]]));
+}
+
+// Sets are matched across workouts by their rank among warm-ups or among working sets ("2nd working
+// set"), since two workouts may plan a different number of warm-ups for the same exercise.
+export function rankKey(sets: Pick<SetTarget, 'kind'>[], index: number): string {
+  const warmup = sets[index]!.kind === 'warmup';
+  return `${warmup}:${sets.slice(0, index).filter((t) => (t.kind === 'warmup') === warmup).length}`;
+}
+
+// What was done for an exercise: values by rankKey, and the first working set as the model of
+// identical sets. `sets` in set order, each with its rankKey in the plan it was done from.
+export interface DoneSets {
+  values: Map<string, Values>;
+  model: Values | undefined;
+}
+
+export function doneSets(sets: { key: string; set: Pick<SetTarget, 'kind'> & Values }[]): DoneSets {
+  const firstWorking = sets.find((s) => s.set.kind !== 'warmup');
+  return {
+    values: new Map(sets.map((s) => [s.key, doneValues(s.set)])),
+    model: firstWorking && doneValues(firstWorking.set),
+  };
+}
+
+// A plan with the values done. Only planned sets change (extra sets are not added); in simple mode
+// the model applies to every set.
+export function withDone(targets: SetTarget[], mode: ItemMode, done: DoneSets): SetTarget[] {
+  if (mode === 'simple') return done.model ? updateAll(targets, done.model) : targets;
+  return targets.map((t, i) => {
+    const values = done.values.get(rankKey(targets, i));
+    return values ? { ...t, ...values } : t;
+  });
+}
+
 export function removeSet(targets: SetTarget[], index: number): SetTarget[] {
   return targets.length <= 1 ? targets : targets.filter((_, i) => i !== index);
 }

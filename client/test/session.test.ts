@@ -193,6 +193,30 @@ describe('session flow', () => {
     expect(oldSquat!.targets[0]!.weightG).not.toBe(100000);
   });
 
+  it('starts an exercise added again from what is known of it', async () => {
+    // Never done, in no workout: the defaults of its type.
+    const fresh = await createWorkout('Nouveau', db);
+    await addItem(fresh, plank, db);
+    expect((await liveItems(db, fresh))[0]!.targets).toEqual(Array.from({ length: 3 }, () => ({ kind: 'normal', durationS: 30, restS: 60 })));
+
+    // Done once, then its workout deleted: the sets done last time.
+    const legs = await createWorkout('Jambes', db);
+    await addItem(legs, squat, db);
+    await doSession(legs, [70000, 72500]);
+    await deleteWorkout(legs, db);
+    const again = await createWorkout('Encore', db);
+    await addItem(again, squat, db);
+    const [first] = await liveItems(db, again);
+    expect(first!.mode).toBe('per_set');
+    expect(first!.targets.map((t) => [t.reps, t.weightG])).toEqual([[8, 70000], [8, 72500]]);
+
+    // Planned in another workout: that plan (sets, rests), which already has the values done.
+    await updateItem(first!.id, { targets: first!.targets.map((t) => ({ ...t, restS: 150 })) }, db);
+    const other = await createWorkout('Autre', db);
+    await addItem(other, squat, db);
+    expect((await liveItems(db, other))[0]!.targets).toEqual(first!.targets.map((t) => ({ ...t, restS: 150 })));
+  });
+
   it('discards a session without any set', async () => {
     const w = await createWorkout('Vide', db);
     await addItem(w, squat, db);

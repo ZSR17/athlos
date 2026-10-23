@@ -1,6 +1,7 @@
 import type { SetTarget } from '@athlos/shared';
-import { type ItemMode, defaultTargets, toSimple } from '../lib/targets.ts';
+import { type ItemMode, defaultTargets, doneSets, doneValues, rankKey, toSimple, withDone } from '../lib/targets.ts';
 import { type LocalExercise, type LocalWorkout, type LocalWorkoutItem, type AthlosDb, db as defaultDb } from './db.ts';
+import { exerciseHistory } from './sessions.ts';
 
 const now = () => Date.now();
 const touched = () => ({ updatedAt: now(), dirty: 1 as const });
@@ -62,8 +63,35 @@ export async function duplicateWorkout(id: string, db: AthlosDb = defaultDb): Pr
   return copyId;
 }
 
+// A newly added exercise starts from what is known of it: the plan of another workout using it (sets,
+// warm-ups, rests) with the values of the last time it was done; else the sets done last time; else
+// the defaults of its type.
+async function startingPlan(exercise: LocalExercise, db: AthlosDb): Promise<{ mode: ItemMode; targets: SetTarget[] }> {
+  const others = (await db.workoutItems.where('exerciseId').equals(exercise.id).toArray())
+    .filter((i) => !i.deleted)
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+  let base: LocalWorkoutItem | undefined;
+  for (const item of others) {
+    if ((await db.workouts.get(item.workoutId))?.deleted === 0) {
+      base = item;
+      break;
+    }
+  }
+  const history = await exerciseHistory(exercise.id, db);
+  const last = history[history.length - 1]?.sets ?? [];
+  if (base) return { mode: base.mode, targets: withDone(base.targets, base.mode, doneSets(last.map((l, i) => ({ key: rankKey(last, i), set: l })))) };
+  if (last.length) {
+    const restS = defaultTargets(exercise.exerciseType)[0]!.restS;
+    const targets = last.map((l) => ({ kind: l.kind, ...doneValues(l), restS }));
+    const identical = targets.every((t) => t.kind === 'normal' && JSON.stringify(t) === JSON.stringify(targets[0]));
+    return { mode: identical ? 'simple' : 'per_set', targets };
+  }
+  return { mode: 'simple', targets: defaultTargets(exercise.exerciseType) };
+}
+
 export async function addItem(workoutId: string, exercise: LocalExercise, db: AthlosDb = defaultDb): Promise<string> {
   const items = await liveItems(db, workoutId);
+  const { mode, targets } = await startingPlan(exercise, db);
   const id = crypto.randomUUID();
   const t = now();
   await db.workoutItems.add({
@@ -71,9 +99,9 @@ export async function addItem(workoutId: string, exercise: LocalExercise, db: At
     workoutId,
     exerciseId: exercise.id,
     position: (items[items.length - 1]?.position ?? -1) + 1,
-    mode: 'simple',
+    mode,
     supersetGroup: null,
-    targets: defaultTargets(exercise.exerciseType),
+    targets,
     note: null,
     createdAt: t,
     updatedAt: t,
