@@ -126,6 +126,13 @@ export async function setItemMode(item: LocalWorkoutItem, mode: ItemMode, db: At
   await updateItem(item.id, { mode, targets }, db);
 }
 
+// Rewrites positions so the list of workouts matches `orderedIds`.
+export async function reorderWorkouts(orderedIds: string[], db: AthlosDb = defaultDb) {
+  await db.transaction('rw', db.workouts, async () => {
+    for (const [position, id] of orderedIds.entries()) await db.workouts.update(id, { position, ...touched() });
+  });
+}
+
 // Rewrites positions so the list order matches `orderedIds`, then cleans up broken supersets.
 export async function reorderItems(workoutId: string, orderedIds: string[], db: AthlosDb = defaultDb) {
   await db.transaction('rw', db.workoutItems, async () => {

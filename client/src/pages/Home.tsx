@@ -1,9 +1,13 @@
+import { DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/Icon.tsx';
 import { SyncBadge } from '../components/SyncBadge.tsx';
 import { db } from '../db/db.ts';
-import { createWorkout } from '../db/workouts.ts';
+import { createWorkout, reorderWorkouts } from '../db/workouts.ts';
 import { useStartSession } from '../lib/useStartSession.ts';
 
 function useWorkoutSummaries() {
@@ -21,10 +25,98 @@ function useWorkoutSummaries() {
   }, []);
 }
 
+type Summary = NonNullable<ReturnType<typeof useWorkoutSummaries>>[number];
+
+// A workout of the list. Pressing and holding the card (or Space on it) lets it be moved; a plain
+// click still opens it.
+function WorkoutCard({ workout, onStart }: { workout: Summary; onStart: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: workout.id });
+  return (
+    <div
+      ref={setNodeRef}
+      className="list-item"
+      style={{
+        padding: '10px 10px 10px 14px',
+        cursor: isDragging ? 'grabbing' : 'default',
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+        zIndex: isDragging ? 2 : undefined,
+        position: 'relative',
+        userSelect: 'none',
+      }}
+      {...attributes}
+      {...listeners}
+      // Keys pressed on the link or the button inside are theirs, not a move of the card.
+      onKeyDown={(e) => e.target === e.currentTarget && listeners?.onKeyDown?.(e)}
+      aria-roledescription="séance déplaçable"
+    >
+      {/* Not a native link drag: holding the card moves it. */}
+      <Link to={`/seances/${workout.id}`} draggable={false} className="row grow" style={{ textDecoration: 'none', color: 'var(--text)' }}>
+        <span
+          className="num"
+          style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 12, background: 'var(--surface2)', display: 'grid', placeItems: 'center', color: 'var(--accent-text)', fontSize: 18 }}
+          aria-hidden="true"
+        >
+          {workout.name.charAt(0).toUpperCase()}
+        </span>
+        <span className="grow stack" style={{ gap: 2 }}>
+          <span className="ellipsis" style={{ fontWeight: 700 }}>
+            {workout.name}
+          </span>
+          <span className="small muted">
+            {workout.exercises} exercice{workout.exercises > 1 ? 's' : ''} · {workout.sets} série{workout.sets > 1 ? 's' : ''}
+          </span>
+        </span>
+      </Link>
+      <button
+        type="button"
+        className="btn btn-primary"
+        style={{ minHeight: 44, padding: '0 14px' }}
+        onClick={onStart}
+        disabled={workout.exercises === 0}
+        aria-label={`Démarrer ${workout.name}`}
+      >
+        <Icon name="play" size={18} />
+        Démarrer
+      </button>
+    </div>
+  );
+}
+
 export function Home() {
   const navigate = useNavigate();
   const start = useStartSession();
   const workouts = useWorkoutSummaries();
+  // Optimistic order while a move is being saved, to avoid a flicker back to the old order.
+  const [order, setOrder] = useState<string[] | null>(null);
+  useEffect(() => setOrder(null), [workouts]);
+  const ordered = useMemo(() => {
+    if (!workouts) return [];
+    if (!order) return workouts;
+    const byId = new Map(workouts.map((w) => [w.id, w]));
+    return order.map((id) => byId.get(id)).filter((w) => w !== undefined);
+  }, [workouts, order]);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { delay: 250, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  // Dropping a card on its link must not open it (dnd-kit stops the click, not the link's navigation).
+  const moved = useRef(false);
+  useEffect(() => {
+    const block = (e: MouseEvent) => moved.current && e.preventDefault();
+    addEventListener('click', block, true);
+    return () => removeEventListener('click', block, true);
+  }, []);
+  const settle = () => setTimeout(() => (moved.current = false));
+  const onDragEnd = ({ active, over }: DragEndEvent) => {
+    settle();
+    if (!over || active.id === over.id) return;
+    const ids = ordered.map((w) => w.id);
+    const next = arrayMove(ids, ids.indexOf(String(active.id)), ids.indexOf(String(over.id)));
+    setOrder(next);
+    void reorderWorkouts(next);
+  };
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const create = async () => navigate(`/seances/${await createWorkout('Nouvelle séance')}`);
@@ -51,38 +143,19 @@ export function Home() {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10 }}>
-        {workouts?.map((w) => (
-          <div key={w.id} className="list-item" style={{ padding: '10px 10px 10px 14px', cursor: 'default' }}>
-            <Link to={`/seances/${w.id}`} className="row grow" style={{ textDecoration: 'none', color: 'var(--text)' }}>
-              <span
-                className="num"
-                style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 12, background: 'var(--surface2)', display: 'grid', placeItems: 'center', color: 'var(--accent-text)', fontSize: 18 }}
-                aria-hidden="true"
-              >
-                {w.name.charAt(0).toUpperCase()}
-              </span>
-              <span className="grow stack" style={{ gap: 2 }}>
-                <span className="ellipsis" style={{ fontWeight: 700 }}>
-                  {w.name}
-                </span>
-                <span className="small muted">
-                  {w.exercises} exercice{w.exercises > 1 ? 's' : ''} · {w.sets} série{w.sets > 1 ? 's' : ''}
-                </span>
-              </span>
-            </Link>
-            <button
-              type="button"
-              className="btn btn-primary"
-              style={{ minHeight: 44, padding: '0 14px' }}
-              onClick={() => start(w.id)}
-              disabled={w.exercises === 0}
-              aria-label={`Démarrer ${w.name}`}
-            >
-              <Icon name="play" size={18} />
-              Démarrer
-            </button>
-          </div>
-        ))}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={() => (moved.current = true)}
+          onDragEnd={onDragEnd}
+          onDragCancel={settle}
+        >
+          <SortableContext items={ordered.map((w) => w.id)} strategy={rectSortingStrategy}>
+            {ordered.map((w) => (
+              <WorkoutCard key={w.id} workout={w} onStart={() => start(w.id)} />
+            ))}
+          </SortableContext>
+        </DndContext>
       </div>
 
       <button type="button" className="btn btn-dashed" onClick={create}>
