@@ -427,8 +427,13 @@ h3 {
   background: var(--surface);
   outline: none;
 }
+/* Text fields show focus with their own border, not the global focus ring around it. */
 .input:focus-visible,
 .cell-input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+.search:focus-within {
   border-color: var(--accent);
 }
 .search {
@@ -701,6 +706,10 @@ h3 {
   border-radius: 12px;
   background: var(--bg);
   min-height: 42px;
+  border: 1px solid transparent;
+}
+.note-input:focus-within {
+  border-color: var(--accent);
 }
 .note-input input {
   flex: 1;
