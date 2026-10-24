@@ -12,7 +12,8 @@ import {
   startSession,
   updateLive,
 } from '../src/db/sessions.ts';
-import { addItem, createWorkout, deleteWorkout, liveItems, toggleSupersetWithNext, updateItem } from '../src/db/workouts.ts';
+import { createWorkout, deleteWorkout, liveItems } from '../src/db/workouts.ts';
+import { addItem, toggleSupersetWithNext, updateItem } from './workout-helpers.ts';
 import { metricsForType, recordFor } from '../src/lib/progress.ts';
 import { type PlanItem, buildSteps, estimate1RM, increase, nextOpenStep, prefill, raised, restAfter } from '../src/lib/session.ts';
 

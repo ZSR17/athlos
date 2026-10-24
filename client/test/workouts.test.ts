@@ -1,17 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { type LocalExercise, HalkoDb } from '../src/db/db.ts';
-import {
-  addItem,
-  createWorkout,
-  deleteWorkout,
-  duplicateWorkout,
-  liveItems,
-  removeItem,
-  reorderItems,
-  setItemMode,
-  supersetLabels,
-  toggleSupersetWithNext,
-} from '../src/db/workouts.ts';
+import { type LocalExercise, type LocalWorkoutItem, HalkoDb } from '../src/db/db.ts';
+import { createWorkout, deleteWorkout, duplicateWorkout, liveItems, newItem, saveWorkout, supersetLabels } from '../src/db/workouts.ts';
+import { moveItem, removeItemAt, toggleSuperset, withMode } from '../src/lib/workoutDraft.ts';
+import { addItem } from './workout-helpers.ts';
 
 let db: HalkoDb;
 let n = 0;
@@ -45,7 +36,7 @@ async function workoutWith(names: string[]) {
   return id;
 }
 
-const groups = async (id: string) => (await liveItems(db, id)).map((i) => i.supersetGroup);
+const groups = (items: LocalWorkoutItem[]) => items.map((i) => i.supersetGroup);
 
 beforeEach(() => {
   db = new HalkoDb(`test-${n++}`);
@@ -61,57 +52,64 @@ describe('workouts', () => {
   });
 
   it('links and unlinks supersets', async () => {
-    const id = await workoutWith(['A', 'B', 'C']);
-    let items = await liveItems(db, id);
-    await toggleSupersetWithNext(items[0]!, db);
-    const g = await groups(id);
+    let items = await liveItems(db, await workoutWith(['A', 'B', 'C']));
+    items = toggleSuperset(items, 0);
+    const g = groups(items);
     expect(g[0]).toBeTruthy();
     expect(g[0]).toBe(g[1]);
     expect(g[2]).toBeNull();
 
     // Extending the superset to a third exercise.
-    items = await liveItems(db, id);
-    await toggleSupersetWithNext(items[1]!, db);
-    const g3 = await groups(id);
-    expect(new Set(g3).size).toBe(1);
-    expect(supersetLabels(await liveItems(db, id)).get(g3[0]!)).toBe('A');
+    items = toggleSuperset(items, 1);
+    expect(new Set(groups(items)).size).toBe(1);
+    expect(supersetLabels(items).get(items[0]!.supersetGroup!)).toBe('A');
 
     // Unlinking in the middle leaves a valid 2-item superset and an ungrouped item.
-    items = await liveItems(db, id);
-    await toggleSupersetWithNext(items[1]!, db);
-    const g4 = await groups(id);
+    items = toggleSuperset(items, 1);
+    const g4 = groups(items);
     expect(g4[0]).toBe(g4[1]);
     expect(g4[2]).toBeNull();
   });
 
-  it('cleans up supersets broken by a reorder or a removal', async () => {
-    const id = await workoutWith(['A', 'B', 'C']);
-    let items = await liveItems(db, id);
-    await toggleSupersetWithNext(items[0]!, db);
-    items = await liveItems(db, id);
+  it('cleans up supersets broken by a move or a removal', async () => {
+    let items = toggleSuperset(await liveItems(db, await workoutWith(['A', 'B', 'C'])), 0);
     // Move C between A and B: the superset is split into singletons, which get ungrouped.
-    await reorderItems(id, [items[0]!.id, items[2]!.id, items[1]!.id], db);
-    expect(await groups(id)).toEqual([null, null, null]);
+    expect(groups(moveItem(items, 2, 1))).toEqual([null, null, null]);
 
-    items = await liveItems(db, id);
-    await toggleSupersetWithNext(items[0]!, db);
-    items = await liveItems(db, id);
-    await removeItem(items[1]!, db);
-    expect(await groups(id)).toEqual([null, null]);
+    items = toggleSuperset(items, 0);
+    expect(groups(removeItemAt(items, 1))).toEqual([null, null]);
   });
 
-  it('switches mode and duplicates / deletes workouts', async () => {
+  it('saves an edited workout at once, writing only what changed', async () => {
+    const id = await workoutWith(['A', 'B', 'C']);
+    const before = await liveItems(db, id);
+    const [a, b, c] = before;
+    const edited = [withMode(c!, 'per_set'), a!, await newItem(id, exercise('D'), db)];
+    await saveWorkout(id, '  Jambes v2 ', edited, db);
+
+    const after = await liveItems(db, id);
+    expect(after.map((i) => i.exerciseId)).toEqual(['ex-C', 'ex-A', 'ex-D']);
+    expect(after.map((i) => i.position)).toEqual([0, 1, 2]);
+    expect(after[0]!.mode).toBe('per_set');
+    expect((await db.workoutItems.get(b!.id))!.deleted).toBe(1);
+    expect((await db.workouts.get(id))!.name).toBe('Jambes v2');
+
+    // Saving the same list again writes nothing.
+    const stamps = after.map((i) => i.updatedAt);
+    await saveWorkout(id, 'Jambes v2', after, db);
+    expect((await liveItems(db, id)).map((i) => i.updatedAt)).toEqual(stamps);
+  });
+
+  it('duplicates and deletes workouts', async () => {
     const id = await workoutWith(['A', 'B']);
+    await saveWorkout(id, 'Jambes', toggleSuperset(await liveItems(db, id), 0), db);
     const items = await liveItems(db, id);
-    await toggleSupersetWithNext(items[0]!, db);
-    await setItemMode(items[0]!, 'per_set', db);
-    expect((await liveItems(db, id))[0]!.mode).toBe('per_set');
 
     const copy = await duplicateWorkout(id, db);
     const copied = await liveItems(db, copy);
     expect(copied).toHaveLength(2);
     expect(copied[0]!.supersetGroup).toBe(copied[1]!.supersetGroup);
-    expect(copied[0]!.supersetGroup).not.toBe(items[0]!.supersetGroup ?? (await liveItems(db, id))[0]!.supersetGroup);
+    expect(copied[0]!.supersetGroup).not.toBe(items[0]!.supersetGroup);
 
     await deleteWorkout(id, db);
     expect((await db.workouts.get(id))!.deleted).toBe(1);

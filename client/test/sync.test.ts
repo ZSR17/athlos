@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HalkoDb, type LocalExercise } from '../src/db/db.ts';
 import { startSession } from '../src/db/sessions.ts';
-import { addItem, createWorkout, updateWorkout } from '../src/db/workouts.ts';
+import { createWorkout, liveItems, saveWorkout } from '../src/db/workouts.ts';
+import { addItem } from './workout-helpers.ts';
 import { applyChanges, collectChanges, markPushed, syncNow, syncStatus } from '../src/sync/engine.ts';
 import { syncSettings } from '../src/sync/settings.ts';
 
@@ -88,7 +89,7 @@ describe('sync engine', () => {
     mockServer(() => empty);
     const { snapshot } = await collectChanges(db);
     await new Promise((r) => setTimeout(r, 2));
-    await updateWorkout(w, { name: 'Jambes v2' }, db);
+    await saveWorkout(w, 'Jambes v2', await liveItems(db, w), db);
     await markPushed(db, snapshot, []);
     expect((await db.workouts.get(w))!.dirty).toBe(1);
   });

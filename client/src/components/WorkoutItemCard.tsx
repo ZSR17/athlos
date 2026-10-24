@@ -1,13 +1,12 @@
 import type { Metric, SetTarget } from '@halko/shared';
-import { EXERCISE_TYPES } from '@halko/shared';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { LocalExercise, LocalWorkoutItem } from '../db/db.ts';
-import { removeItem, setItemMode, updateItem } from '../db/workouts.ts';
 import { formatDuration, formatKg, formatKm, formatSetValues, parseCount, parseDuration, parseKg, parseKm } from '../lib/format.ts';
 import { addSet, metricLabel, metricsFor, removeSet, setSimpleCount, updateAll, updateOne } from '../lib/targets.ts';
+import { withMode } from '../lib/workoutDraft.ts';
 import { thumbUrl } from './ExerciseMedia.tsx';
 import { Icon } from './Icon.tsx';
 import { ValueInput } from './ValueInput.tsx';
@@ -28,24 +27,10 @@ interface Props {
   supersetLabel?: string;
 }
 
-export function WorkoutItemCard({ item, exercise, supersetLabel }: Props) {
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-  });
-  const [note, setNote] = useState(item.note ?? '');
-  useEffect(() => setNote(item.note ?? ''), [item.note]);
-
-  const type = exercise?.exerciseType ?? 'weight_reps';
-  const metrics = metricsFor(type);
-  const setTargets = (targets: SetTarget[]) => updateItem(item.id, { targets });
-  const first = item.targets[0];
-
+// Top of the card, the same read-only and while editing: picture, name, number of sets; `children` on the right.
+function ItemHeader({ item, exercise, supersetLabel, children }: Props & { children: ReactNode }) {
   return (
-    <article
-      ref={setNodeRef}
-      className={`item-card${supersetLabel ? ' in-superset' : ''}`}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1, zIndex: isDragging ? 2 : undefined, position: 'relative' }}
-    >
+    <>
       {supersetLabel && (
         <span className="superset-tag">
           <Icon name="link" size={14} />
@@ -54,13 +39,47 @@ export function WorkoutItemCard({ item, exercise, supersetLabel }: Props) {
       )}
       <div className="row" style={{ gap: 10 }}>
         <img className="thumb thumb-sm" src={thumbUrl(exercise?.mediaUrls ?? [])} alt="" />
-        <div className="grow stack" style={{ gap: 2 }}>
-          <Link to={`/exercices/${item.exerciseId}`} className="ellipsis" style={{ fontWeight: 700, color: 'var(--text)', textDecoration: 'none' }}>
+        <span className="grow stack" style={{ gap: 2, minWidth: 0 }}>
+          <span className="ellipsis" style={{ fontWeight: 700 }}>
             {exercise?.name ?? 'Exercice'}
-          </Link>
-          <span className="small muted">{EXERCISE_TYPES[type].label}</span>
-        </div>
-        <button type="button" className="icon-btn" style={{ background: 'transparent', width: 36 }} onClick={() => removeItem(item)} aria-label={`Retirer ${exercise?.name ?? "l'exercice"}`}>
+          </span>
+          <span className="small muted">
+            {item.targets.length} série{item.targets.length > 1 ? 's' : ''}
+          </span>
+        </span>
+        {children}
+      </div>
+    </>
+  );
+}
+
+// An exercise of a workout being edited: changes go to `onChange`, saved with the whole workout.
+export function WorkoutItemCard({
+  item,
+  exercise,
+  supersetLabel,
+  onChange,
+  onRemove,
+}: Props & { onChange: (item: LocalWorkoutItem) => void; onRemove: () => void }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+  const [note, setNote] = useState(item.note ?? '');
+  useEffect(() => setNote(item.note ?? ''), [item.note]);
+
+  const type = exercise?.exerciseType ?? 'weight_reps';
+  const metrics = metricsFor(type);
+  const setTargets = (targets: SetTarget[]) => onChange({ ...item, targets });
+  const first = item.targets[0];
+
+  return (
+    <article
+      ref={setNodeRef}
+      className={`item-card${supersetLabel ? ' in-superset' : ''}`}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1, zIndex: isDragging ? 2 : undefined, position: 'relative' }}
+    >
+      <ItemHeader item={item} exercise={exercise} supersetLabel={supersetLabel}>
+        <button type="button" className="icon-btn" style={{ background: 'transparent', width: 36 }} onClick={onRemove} aria-label={`Retirer ${exercise?.name ?? "l'exercice"}`}>
           <Icon name="trash" size={18} />
         </button>
         <button
@@ -73,13 +92,13 @@ export function WorkoutItemCard({ item, exercise, supersetLabel }: Props) {
         >
           <Icon name="grip" size={18} />
         </button>
-      </div>
+      </ItemHeader>
 
       <div className="seg" role="group" aria-label="Mode de saisie">
-        <button type="button" aria-pressed={item.mode === 'simple'} onClick={() => setItemMode(item, 'simple')}>
+        <button type="button" aria-pressed={item.mode === 'simple'} onClick={() => onChange(withMode(item, 'simple'))}>
           Simple
         </button>
-        <button type="button" aria-pressed={item.mode === 'per_set'} onClick={() => setItemMode(item, 'per_set')}>
+        <button type="button" aria-pressed={item.mode === 'per_set'} onClick={() => onChange(withMode(item, 'per_set'))}>
           Série par série
         </button>
       </div>
@@ -195,7 +214,7 @@ export function WorkoutItemCard({ item, exercise, supersetLabel }: Props) {
           value={note}
           placeholder="Ajouter une note (réglage machine, consigne…)"
           onChange={(e) => setNote(e.target.value)}
-          onBlur={() => note !== (item.note ?? '') && updateItem(item.id, { note: note.trim() || null })}
+          onBlur={() => note !== (item.note ?? '') && onChange({ ...item, note: note.trim() || null })}
         />
       </label>
     </article>
@@ -207,23 +226,10 @@ export function WorkoutItemView({ item, exercise, supersetLabel }: Props) {
   const type = exercise?.exerciseType ?? 'weight_reps';
   return (
     <article className={`item-card${supersetLabel ? ' in-superset' : ''}`}>
-      {supersetLabel && (
-        <span className="superset-tag">
-          <Icon name="link" size={14} />
-          Superset {supersetLabel}
-        </span>
-      )}
-      <Link to={`/exercices/${item.exerciseId}`} className="row" style={{ gap: 10, color: 'var(--text)', textDecoration: 'none' }}>
-        <img className="thumb thumb-sm" src={thumbUrl(exercise?.mediaUrls ?? [])} alt="" />
-        <span className="grow stack" style={{ gap: 2, minWidth: 0 }}>
-          <span className="ellipsis" style={{ fontWeight: 700 }}>
-            {exercise?.name ?? 'Exercice'}
-          </span>
-          <span className="small muted">
-            {item.targets.length} série{item.targets.length > 1 ? 's' : ''}
-          </span>
-        </span>
-        <Icon name="chevron" size={18} />
+      <Link to={`/exercices/${item.exerciseId}`} style={{ color: 'var(--text)', textDecoration: 'none' }}>
+        <ItemHeader item={item} exercise={exercise} supersetLabel={supersetLabel}>
+          <Icon name="chevron" size={18} />
+        </ItemHeader>
       </Link>
       <div className="chips-wrap" style={{ gap: 6 }}>
         {item.targets.map((t, k) => (

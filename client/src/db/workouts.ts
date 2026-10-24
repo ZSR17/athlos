@@ -1,6 +1,6 @@
 import type { SetTarget } from '@halko/shared';
-import { type ItemMode, defaultTargets, doneSets, doneValues, rankKey, toSimple, withDone } from '../lib/targets.ts';
-import { type LocalExercise, type LocalWorkout, type LocalWorkoutItem, type HalkoDb, db as defaultDb } from './db.ts';
+import { type ItemMode, defaultTargets, doneSets, doneValues, rankKey, withDone } from '../lib/targets.ts';
+import { type LocalExercise, type LocalWorkoutItem, type HalkoDb, db as defaultDb } from './db.ts';
 import { exerciseHistory } from './sessions.ts';
 
 const now = () => Date.now();
@@ -27,10 +27,6 @@ export async function createWorkout(name: string, db: HalkoDb = defaultDb): Prom
     dirty: 1,
   });
   return id;
-}
-
-export async function updateWorkout(id: string, patch: Partial<Pick<LocalWorkout, 'name' | 'note'>>, db: HalkoDb = defaultDb) {
-  await db.workouts.update(id, { ...patch, ...touched() });
 }
 
 export async function deleteWorkout(id: string, db: HalkoDb = defaultDb) {
@@ -89,16 +85,15 @@ async function startingPlan(exercise: LocalExercise, db: HalkoDb): Promise<{ mod
   return { mode: 'simple', targets: defaultTargets(exercise.exerciseType) };
 }
 
-export async function addItem(workoutId: string, exercise: LocalExercise, db: HalkoDb = defaultDb): Promise<string> {
-  const items = await liveItems(db, workoutId);
+// A new item for `exercise`, not saved yet (added to a workout being edited).
+export async function newItem(workoutId: string, exercise: LocalExercise, db: HalkoDb = defaultDb): Promise<LocalWorkoutItem> {
   const { mode, targets } = await startingPlan(exercise, db);
-  const id = crypto.randomUUID();
   const t = now();
-  await db.workoutItems.add({
-    id,
+  return {
+    id: crypto.randomUUID(),
     workoutId,
     exerciseId: exercise.id,
-    position: (items[items.length - 1]?.position ?? -1) + 1,
+    position: 0,
     mode,
     supersetGroup: null,
     targets,
@@ -107,23 +102,39 @@ export async function addItem(workoutId: string, exercise: LocalExercise, db: Ha
     updatedAt: t,
     deleted: 0,
     dirty: 1,
+  };
+}
+
+const sameItem = (a: LocalWorkoutItem, b: LocalWorkoutItem) =>
+  a.position === b.position &&
+  a.mode === b.mode &&
+  a.supersetGroup === b.supersetGroup &&
+  a.note === b.note &&
+  JSON.stringify(a.targets) === JSON.stringify(b.targets);
+
+// Saves an edited workout at once: its name and its items in this order. Items no longer listed are
+// deleted; only rows that changed are written (and synced).
+export async function saveWorkout(id: string, name: string, items: LocalWorkoutItem[], db: HalkoDb = defaultDb) {
+  await db.transaction('rw', db.workouts, db.workoutItems, async () => {
+    const workout = await db.workouts.get(id);
+    if (!workout) return;
+    const saved = new Map((await liveItems(db, id)).map((i) => [i.id, i]));
+    let changed = false;
+    for (const old of saved.values()) {
+      if (items.some((i) => i.id === old.id)) continue;
+      await db.workoutItems.update(old.id, { deleted: 1, ...touched() });
+      changed = true;
+    }
+    for (const [position, item] of items.entries()) {
+      const row = { ...item, workoutId: id, position };
+      const old = saved.get(item.id);
+      if (old && sameItem(old, row)) continue;
+      await db.workoutItems.put({ ...row, ...touched() });
+      changed = true;
+    }
+    const trimmed = name.trim() || workout.name;
+    if (changed || trimmed !== workout.name) await db.workouts.update(id, { name: trimmed, ...touched() });
   });
-  await db.workouts.update(workoutId, touched());
-  return id;
-}
-
-export async function updateItem(
-  id: string,
-  patch: Partial<Pick<LocalWorkoutItem, 'targets' | 'note' | 'mode'>>,
-  db: HalkoDb = defaultDb,
-) {
-  await db.workoutItems.update(id, { ...patch, ...touched() });
-}
-
-export async function setItemMode(item: LocalWorkoutItem, mode: ItemMode, db: HalkoDb = defaultDb) {
-  if (item.mode === mode) return;
-  const targets: SetTarget[] = mode === 'simple' ? toSimple(item.targets) : item.targets;
-  await updateItem(item.id, { mode, targets }, db);
 }
 
 // Rewrites positions so the list of workouts matches `orderedIds`.
@@ -131,72 +142,6 @@ export async function reorderWorkouts(orderedIds: string[], db: HalkoDb = defaul
   await db.transaction('rw', db.workouts, async () => {
     for (const [position, id] of orderedIds.entries()) await db.workouts.update(id, { position, ...touched() });
   });
-}
-
-// Rewrites positions so the list order matches `orderedIds`, then cleans up broken supersets.
-export async function reorderItems(workoutId: string, orderedIds: string[], db: HalkoDb = defaultDb) {
-  await db.transaction('rw', db.workoutItems, async () => {
-    for (const [position, id] of orderedIds.entries()) {
-      await db.workoutItems.update(id, { position, ...touched() });
-    }
-    await normalizeSupersets(workoutId, db);
-  });
-}
-
-export async function removeItem(item: LocalWorkoutItem, db: HalkoDb = defaultDb) {
-  await db.transaction('rw', db.workoutItems, async () => {
-    await db.workoutItems.update(item.id, { deleted: 1, ...touched() });
-    await normalizeSupersets(item.workoutId, db);
-  });
-}
-
-// Links `item` with the next exercise into a superset, or unlinks them if already linked.
-export async function toggleSupersetWithNext(item: LocalWorkoutItem, db: HalkoDb = defaultDb) {
-  await db.transaction('rw', db.workoutItems, async () => {
-    const items = await liveItems(db, item.workoutId);
-    const idx = items.findIndex((i) => i.id === item.id);
-    const cur = items[idx];
-    const next = items[idx + 1];
-    if (!cur || !next) return;
-    if (cur.supersetGroup && cur.supersetGroup === next.supersetGroup) {
-      // Split the group after `cur`: everything from `next` on gets a fresh group.
-      const fresh = crypto.randomUUID();
-      for (const i of items.slice(idx + 1)) {
-        if (i.supersetGroup !== cur.supersetGroup) break;
-        await db.workoutItems.update(i.id, { supersetGroup: fresh, ...touched() });
-      }
-    } else {
-      const group = cur.supersetGroup ?? next.supersetGroup ?? crypto.randomUUID();
-      const nextGroup = next.supersetGroup;
-      await db.workoutItems.update(cur.id, { supersetGroup: group, ...touched() });
-      for (const i of items.slice(idx + 1)) {
-        if (i.id !== next.id && (nextGroup === null || i.supersetGroup !== nextGroup)) break;
-        await db.workoutItems.update(i.id, { supersetGroup: group, ...touched() });
-      }
-    }
-    await normalizeSupersets(item.workoutId, db);
-  });
-}
-
-// A superset must be a run of ≥ 2 consecutive items: drop groups that became singletons or got split.
-async function normalizeSupersets(workoutId: string, db: HalkoDb = defaultDb) {
-  const items = await liveItems(db, workoutId);
-  const seen = new Set<string>();
-  for (let start = 0; start < items.length; ) {
-    const group = items[start]!.supersetGroup;
-    let end = start;
-    while (group && items[end + 1]?.supersetGroup === group) end++;
-    if (group) {
-      const run = items.slice(start, end + 1);
-      // Singletons are ungrouped; a second run reusing a group id (after a reorder) gets its own id.
-      const replacement = run.length < 2 ? null : seen.has(group) ? crypto.randomUUID() : group;
-      if (replacement !== group) {
-        for (const i of run) await db.workoutItems.update(i.id, { supersetGroup: replacement, ...touched() });
-      }
-      seen.add(group);
-    }
-    start = end + 1;
-  }
 }
 
 // "A", "B"… per superset in order of appearance, for display.

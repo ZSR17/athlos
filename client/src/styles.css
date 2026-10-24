@@ -1362,3 +1362,10 @@ select.input {
 .tag-warmup {
   color: var(--warn);
 }
+/* The name of a workout being edited, in the place and size of its title. */
+.title-input {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  min-height: 56px;
+}

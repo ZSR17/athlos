@@ -35,7 +35,7 @@ export interface LocalExercise {
   dirty: 0 | 1;
 }
 
-export interface LocalWorkout extends SyncedRow {
+interface LocalWorkout extends SyncedRow {
   sport: Sport;
   name: string;
   note: string | null;

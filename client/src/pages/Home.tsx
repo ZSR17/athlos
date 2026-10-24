@@ -9,6 +9,7 @@ import { SyncBadge } from '../components/SyncBadge.tsx';
 import { db } from '../db/db.ts';
 import { createWorkout, reorderWorkouts } from '../db/workouts.ts';
 import { useStartSession } from '../lib/useStartSession.ts';
+import type { EditState } from './WorkoutEditor.tsx';
 
 function useWorkoutSummaries() {
   return useLiveQuery(async () => {
@@ -132,7 +133,10 @@ export function Home() {
   };
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  const create = async () => navigate(`/seances/${await createWorkout('Nouvelle séance')}/modifier`);
+  const create = async () => {
+    const state: EditState = { created: true };
+    navigate(`/seances/${await createWorkout('Nouvelle séance')}/modifier`, { state });
+  };
 
   return (
     <div className="page">

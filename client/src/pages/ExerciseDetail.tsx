@@ -10,8 +10,9 @@ import { Icon } from '../components/Icon.tsx';
 import { Sheet } from '../components/Sheet.tsx';
 import { db } from '../db/db.ts';
 import { exerciseHistory } from '../db/sessions.ts';
-import { addItem, createWorkout } from '../db/workouts.ts';
+import { createWorkout } from '../db/workouts.ts';
 import { metricLongLabel, metricsFor } from '../lib/targets.ts';
+import type { EditState } from './WorkoutEditor.tsx';
 
 const LEVELS: Record<string, string> = { beginner: 'Débutant', intermediate: 'Intermédiaire', expert: 'Expert' };
 
@@ -28,9 +29,11 @@ export function ExerciseDetail() {
   if (exercise === undefined) return <div className="page muted">Chargement…</div>;
   if (exercise === null) return <div className="page">Exercice introuvable.</div>;
 
-  const addTo = async (workoutId: string) => {
-    await addItem(workoutId, exercise);
-    navigate(`/seances/${workoutId}/modifier`);
+  // Opens the workout's edit page with the exercise added; cancelling there leaves the workout as it was
+  // (and drops a workout created for it).
+  const addTo = (workoutId: string, created = false) => {
+    const state: EditState = { add: exercise.id, created };
+    navigate(`/seances/${workoutId}/modifier`, { state });
   };
 
   return (
@@ -146,7 +149,7 @@ export function ExerciseDetail() {
               <Icon name="chevron" size={18} />
             </button>
           ))}
-          <button type="button" className="btn btn-dashed" onClick={async () => addTo(await createWorkout('Nouvelle séance'))}>
+          <button type="button" className="btn btn-dashed" onClick={async () => addTo(await createWorkout('Nouvelle séance'), true)}>
             <Icon name="plus" size={20} />
             Nouvelle séance
           </button>
