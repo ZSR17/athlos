@@ -322,4 +322,16 @@ describe('session flow', () => {
     expect(recordFor(maxWeight!, [history[0]!.sets], history[1]!.sets)).toEqual({ value: 75000, previous: 70000 });
     expect(recordFor(maxWeight!, [], history[0]!.sets)).toBeNull();
   });
+
+  it('measures the session volume, the best set volume and the total reps', () => {
+    const sets = [
+      { kind: 'warmup', reps: 10, weightG: 40000 },
+      { kind: 'normal', reps: 8, weightG: 80000 },
+      { kind: 'normal', reps: 6, weightG: 85000 },
+    ];
+    const best = (id: string) => metricsForType('weight_reps').find((m) => m.id === id)!.best(sets);
+    expect(best('volume')).toBe(8 * 80000 + 6 * 85000);
+    expect(best('set-volume')).toBe(8 * 80000);
+    expect(best('total-reps')).toBe(14);
+  });
 });
