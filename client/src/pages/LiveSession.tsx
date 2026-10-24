@@ -1,4 +1,4 @@
-import type { SetTarget } from '@athlos/shared';
+import type { SetTarget } from '@halko/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';

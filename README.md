@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="client/public/icons/favicon.svg" width="96" alt="Logo Athlos">
+<img src="client/public/icons/favicon.svg" width="96" alt="Logo Halko">
 
-# Athlos
+# Halko
 
 **Suivi d'entraînement auto-hébergé : planifie tes séances, suis-les en direct, vois ta progression.**
 
@@ -14,7 +14,7 @@
 
 </div>
 
-Athlos est une application web pour planifier ses séances, les suivre en direct et voir sa progression.
+Halko est une application web pour planifier ses séances, les suivre en direct et voir sa progression.
 Elle tourne sur ton propre serveur (un petit ordinateur suffit) et garde une copie des données dans le
 navigateur : une coupure de réseau n'interrompt rien, la synchronisation reprend au retour. Des apps
 iPhone et Android natives sont prévues ; elles utiliseront la même API de synchronisation.
@@ -78,15 +78,15 @@ Il faut une machine avec Docker. Un accès en **HTTPS** est recommandé : le mot
 passent par le réseau.
 
 ```sh
-git clone https://github.com/ZSR17/athlos.git && cd athlos
-docker build -t athlos .
+git clone https://github.com/ZSR17/halko.git && cd halko
+docker build -t halko .
 
 # Choisir le mot de passe de l'app (demandé deux fois, jamais affiché)
 mkdir -p env data
-docker run --rm -it -v "$PWD/env:/out" athlos node --import tsx src/scripts/hash-password.ts --write /out/athlos.env
+docker run --rm -it -v "$PWD/env:/out" halko node --import tsx src/scripts/hash-password.ts --write /out/halko.env
 
-docker run -d --name athlos --restart unless-stopped \
-  --env-file env/athlos.env -v "$PWD/data:/data" -p 3000:3000 athlos
+docker run -d --name halko --restart unless-stopped \
+  --env-file env/halko.env -v "$PWD/data:/data" -p 3000:3000 halko
 ```
 
 Au premier démarrage, le serveur télécharge la bibliothèque d'exercices (quelques minutes). Mets ensuite un
@@ -106,7 +106,7 @@ npm run dev                               # API sur :3000 et app sur http://loca
 ```
 
 Les données de dev sont dans `server/data`, indépendantes de celles du serveur de production. Pour tester
-sur de vraies données, remplace son contenu (`athlos.db` et `media/`) par une copie de celles de la
+sur de vraies données, remplace son contenu (`halko.db` et `media/`) par une copie de celles de la
 production, serveur de dev arrêté, en supprimant la ligne `instance` de sa table `meta` : l'app du
 navigateur de dev voit alors que la base a changé et repart de zéro au lieu de mélanger les deux.
 
@@ -120,7 +120,7 @@ navigateur de dev voit alors que la base a changé et repart de zéro au lieu de
 | `npx knip` | Détection du code et des dépendances inutilisés |
 
 ```
-athlos/
+halko/
 ├── shared/   vocabulaire commun : types d'exercice, muscles, schémas de l'API (zod)
 ├── server/   API Fastify, SQLite (Drizzle), médias, import des exercices
 │   └── drizzle/   migrations SQL, appliquées au démarrage
@@ -140,7 +140,7 @@ français.
 ## Crédits
 
 - Exercices et images : [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (domaine public),
-  traduits en français pour Athlos.
+  traduits en français pour Halko.
 - Silhouette anatomique : [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter)
   (MIT, voir `client/src/assets/body-paths.LICENSE`).
 

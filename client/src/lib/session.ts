@@ -1,4 +1,4 @@
-import type { ExerciseType, SetTarget } from '@athlos/shared';
+import type { ExerciseType, SetTarget } from '@halko/shared';
 
 // Snapshot of a workout item taken when the session starts, so editing the workout
 // mid-session does not move the ground under the user.

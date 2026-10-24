@@ -1,4 +1,4 @@
-import { type Appearance, type StorageResponse } from '@athlos/shared';
+import { type Appearance, type StorageResponse } from '@halko/shared';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { ask } from '../components/Dialog.tsx';

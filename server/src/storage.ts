@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { StorageResponse } from '@athlos/shared';
+import type { StorageResponse } from '@halko/shared';
 import { eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from './db/index.ts';
 import { exerciseOverrides, exercises, media } from './db/schema.ts';
@@ -40,7 +40,7 @@ export async function storageUsage(db: Db, dataDir: string): Promise<StorageResp
   let databaseBytes = 0;
   for (const suffix of ['', '-wal']) {
     databaseBytes += await fs
-      .stat(path.join(dataDir, `athlos.db${suffix}`))
+      .stat(path.join(dataDir, `halko.db${suffix}`))
       .then((s) => s.size)
       .catch(() => 0);
   }
@@ -54,13 +54,13 @@ export const BACKUPS_KEPT = 7;
 export async function backupDatabase(db: Db, dataDir: string, now = new Date()): Promise<string | null> {
   const dir = path.join(dataDir, 'backups');
   await fs.mkdir(dir, { recursive: true });
-  const file = path.join(dir, `athlos-${now.toISOString().slice(0, 10)}.db`);
+  const file = path.join(dir, `halko-${now.toISOString().slice(0, 10)}.db`);
   const exists = await fs
     .access(file)
     .then(() => true)
     .catch(() => false);
   if (!exists) db.$client.prepare('VACUUM INTO ?').run(file);
-  const old = (await fs.readdir(dir)).filter((f) => /^athlos-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort().slice(0, -BACKUPS_KEPT);
+  const old = (await fs.readdir(dir)).filter((f) => /^halko-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort().slice(0, -BACKUPS_KEPT);
   for (const f of old) await fs.rm(path.join(dir, f), { force: true });
   return exists ? null : file;
 }

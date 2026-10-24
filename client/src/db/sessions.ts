@@ -1,6 +1,6 @@
 import { type PlanItem, type SetValues, type Step, buildSteps, increase, nextOpenStep, raised, restAfter, setCount, stepKey } from '../lib/session.ts';
 import { type DoneSets, doneSets, rankKey, withDone } from '../lib/targets.ts';
-import { type LocalSession, type LocalSetLog, type AthlosDb, db as defaultDb } from './db.ts';
+import { type LocalSession, type LocalSetLog, type HalkoDb, db as defaultDb } from './db.ts';
 import { liveItems } from './workouts.ts';
 
 // State of the session being performed. Device-local (never synced): only the session row and its
@@ -20,20 +20,20 @@ export interface LiveState {
 const LIVE = 'live';
 const touched = () => ({ updatedAt: Date.now(), dirty: 1 as const });
 
-export async function getLive(db: AthlosDb = defaultDb): Promise<LiveState | null> {
+export async function getLive(db: HalkoDb = defaultDb): Promise<LiveState | null> {
   return ((await db.meta.get(LIVE))?.value as LiveState | undefined) ?? null;
 }
 
-async function saveLive(db: AthlosDb, live: LiveState) {
+async function saveLive(db: HalkoDb, live: LiveState) {
   await db.meta.put({ key: LIVE, value: live });
 }
 
-export async function updateLive(patch: Partial<LiveState>, db: AthlosDb = defaultDb) {
+export async function updateLive(patch: Partial<LiveState>, db: HalkoDb = defaultDb) {
   const live = await getLive(db);
   if (live) await saveLive(db, { ...live, ...patch });
 }
 
-export async function startSession(workoutId: string, db: AthlosDb = defaultDb): Promise<string> {
+export async function startSession(workoutId: string, db: HalkoDb = defaultDb): Promise<string> {
   const existing = await getLive(db);
   if (existing) return existing.sessionId;
   const workout = await db.workouts.get(workoutId);
@@ -69,7 +69,7 @@ export async function startSession(workoutId: string, db: AthlosDb = defaultDb):
   return sessionId;
 }
 
-export async function sessionLogs(sessionId: string, db: AthlosDb = defaultDb): Promise<LocalSetLog[]> {
+export async function sessionLogs(sessionId: string, db: HalkoDb = defaultDb): Promise<LocalSetLog[]> {
   const logs = await db.setLogs.where('sessionId').equals(sessionId).toArray();
   return logs.filter((l) => !l.deleted).sort((a, b) => a.completedAt - b.completedAt);
 }
@@ -85,7 +85,7 @@ export async function logSet(
   live: LiveState,
   stepIndex: number,
   values: SetValues,
-  db: AthlosDb = defaultDb,
+  db: HalkoDb = defaultDb,
   startedFrom?: SetValues,
 ) {
   const steps = buildSteps(live.plan, live.extra);
@@ -134,7 +134,7 @@ export async function logSet(
 }
 
 
-export async function addExtraSet(live: LiveState, item: number, db: AthlosDb = defaultDb) {
+export async function addExtraSet(live: LiveState, item: number, db: HalkoDb = defaultDb) {
   const itemId = live.plan[item]!.itemId;
   const extra = { ...live.extra, [itemId]: (live.extra[itemId] ?? 0) + 1 };
   const steps = buildSteps(live.plan, extra);
@@ -149,7 +149,7 @@ export function cursorForItem(live: LiveState, steps: Step[], done: Set<string>,
   return open !== -1 ? open : steps.findIndex((s) => s.item === item);
 }
 
-export async function finishSession(db: AthlosDb = defaultDb): Promise<string | null> {
+export async function finishSession(db: HalkoDb = defaultDb): Promise<string | null> {
   const live = await getLive(db);
   if (!live) return null;
   const logs = await sessionLogs(live.sessionId, db);
@@ -168,7 +168,7 @@ export async function finishSession(db: AthlosDb = defaultDb): Promise<string | 
 // Every workout using an exercise just done takes the values done, so editing any of them shows them.
 // An exercise planned twice in the session: its own item uses its own sets, other workouts the first
 // occurrence.
-async function updatePlans(db: AthlosDb, plan: PlanItem[], logs: LocalSetLog[]) {
+async function updatePlans(db: HalkoDb, plan: PlanItem[], logs: LocalSetLog[]) {
   const done = new Map<string, DoneSets>();
   for (const p of plan) {
     const own = logs
@@ -190,13 +190,13 @@ async function updatePlans(db: AthlosDb, plan: PlanItem[], logs: LocalSetLog[]) 
   }
 }
 
-export async function discardSession(db: AthlosDb = defaultDb) {
+export async function discardSession(db: HalkoDb = defaultDb) {
   const live = await getLive(db);
   if (!live) return;
   await deleteSession(live.sessionId, db);
 }
 
-export async function deleteSession(sessionId: string, db: AthlosDb = defaultDb) {
+export async function deleteSession(sessionId: string, db: HalkoDb = defaultDb) {
   await db.transaction('rw', db.sessions, db.setLogs, db.meta, async () => {
     await db.sessions.update(sessionId, { deleted: 1, ...touched() });
     await db.setLogs.where('sessionId').equals(sessionId).modify({ deleted: 1, ...touched() });
@@ -205,13 +205,13 @@ export async function deleteSession(sessionId: string, db: AthlosDb = defaultDb)
   });
 }
 
-export async function finishedSessions(db: AthlosDb = defaultDb): Promise<LocalSession[]> {
+export async function finishedSessions(db: HalkoDb = defaultDb): Promise<LocalSession[]> {
   const rows = await db.sessions.orderBy('startedAt').reverse().toArray();
   return rows.filter((s) => !s.deleted && s.endedAt !== null);
 }
 
 // All logs of an exercise in finished sessions, grouped by session, oldest first.
-export async function exerciseHistory(exerciseId: string, db: AthlosDb = defaultDb) {
+export async function exerciseHistory(exerciseId: string, db: HalkoDb = defaultDb) {
   const logs = (await db.setLogs.where('[exerciseId+completedAt]').between([exerciseId, 0], [exerciseId, Infinity]).toArray()).filter(
     (l) => !l.deleted,
   );
@@ -230,7 +230,7 @@ export async function exerciseHistory(exerciseId: string, db: AthlosDb = default
 export async function previousPerformance(
   exerciseId: string,
   excludeSessionId: string,
-  db: AthlosDb = defaultDb,
+  db: HalkoDb = defaultDb,
 ): Promise<Map<number, SetValues>> {
   const history = (await exerciseHistory(exerciseId, db)).filter((h) => h.session.id !== excludeSessionId);
   const last = history[history.length - 1];

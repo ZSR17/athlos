@@ -1,14 +1,14 @@
-import { type Crop, MAX_UPLOAD_BYTES, type UploadResponse } from '@athlos/shared';
+import { type Crop, MAX_UPLOAD_BYTES, type UploadResponse } from '@halko/shared';
 import { ApiError, api } from '../lib/api.ts';
 import { syncNow } from '../sync/engine.ts';
-import { type AthlosDb, type LocalExercise, db as defaultDb } from './db.ts';
+import { type HalkoDb, type LocalExercise, db as defaultDb } from './db.ts';
 
 export type ExerciseFields = Pick<
   LocalExercise,
   'name' | 'exerciseType' | 'equipment' | 'primaryMuscles' | 'secondaryMuscles' | 'instructions' | 'mediaIds' | 'mediaUrls'
 >;
 
-export async function createExercise(fields: ExerciseFields, db: AthlosDb = defaultDb): Promise<string> {
+export async function createExercise(fields: ExerciseFields, db: HalkoDb = defaultDb): Promise<string> {
   const id = crypto.randomUUID();
   const t = Date.now();
   await db.exercises.add({
@@ -29,7 +29,7 @@ export async function createExercise(fields: ExerciseFields, db: AthlosDb = defa
 }
 
 // Editing a built-in exercise makes it this user's version (kept on the server, on every device).
-export async function updateExercise(id: string, fields: ExerciseFields, db: AthlosDb = defaultDb): Promise<void> {
+export async function updateExercise(id: string, fields: ExerciseFields, db: HalkoDb = defaultDb): Promise<void> {
   const existing = await db.exercises.get(id);
   if (!existing) throw new Error('exercise not found');
   await db.exercises.update(id, {
@@ -42,7 +42,7 @@ export async function updateExercise(id: string, fields: ExerciseFields, db: Ath
 }
 
 // Only custom exercises can be deleted; they stay in past sessions.
-export async function deleteExercise(id: string, db: AthlosDb = defaultDb): Promise<void> {
+export async function deleteExercise(id: string, db: HalkoDb = defaultDb): Promise<void> {
   await db.exercises.update(id, { deleted: 1, updatedAt: Date.now(), dirty: 1 });
 }
 

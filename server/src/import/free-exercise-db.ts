@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { ExerciseType, MuscleId, Sport } from '@athlos/shared';
+import type { ExerciseType, MuscleId, Sport } from '@halko/shared';
 import { and, eq } from 'drizzle-orm';
 import { type Db, nextRev } from '../db/index.ts';
 import { exercises } from '../db/schema.ts';

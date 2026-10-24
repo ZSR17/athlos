@@ -32,7 +32,7 @@ export function Login({ onLoggedIn }: { onLoggedIn: () => void }) {
   return (
     <div className="page" style={{ maxWidth: 420, minHeight: '100dvh', justifyContent: 'center' }}>
       <span className="title" style={{ color: 'var(--accent-text)' }}>
-        Athlos
+        Halko
       </span>
       <h1 className="title-sm">Connexion au serveur</h1>
       <form className="stack" onSubmit={submit}>

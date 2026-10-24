@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AthlosDb, type LocalExercise } from '../src/db/db.ts';
+import { HalkoDb, type LocalExercise } from '../src/db/db.ts';
 import { startSession } from '../src/db/sessions.ts';
 import { addItem, createWorkout, updateWorkout } from '../src/db/workouts.ts';
 import { applyChanges, collectChanges, markPushed, syncNow, syncStatus } from '../src/sync/engine.ts';
 import { syncSettings } from '../src/sync/settings.ts';
 
-let db: AthlosDb;
+let db: HalkoDb;
 let n = 0;
 const squat: LocalExercise = {
   id: 'squat',
@@ -45,9 +45,9 @@ function mockServer(respond: (body: { since: number; changes: Record<string, unk
 const empty = { rev: 10, hasMore: false, changes: {}, rejected: [] };
 
 beforeEach(async () => {
-  db = new AthlosDb(`sync-${n++}`);
+  db = new HalkoDb(`sync-${n++}`);
   await db.exercises.add(squat);
-  localStorage.setItem('athlos.token', 'test-token');
+  localStorage.setItem('halko.token', 'test-token');
   syncSettings.set({ shareAppearance: false });
 });
 afterEach(() => {

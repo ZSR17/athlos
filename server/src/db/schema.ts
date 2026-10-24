@@ -1,4 +1,4 @@
-import type { ExerciseType, MuscleId, SetKind, SetTarget, Sport, UserSettingKey } from '@athlos/shared';
+import type { ExerciseType, MuscleId, SetKind, SetTarget, Sport, UserSettingKey } from '@halko/shared';
 import { index, integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 // Columns every synced table carries: last-write-wins on updatedAt, incremental pull on rev,

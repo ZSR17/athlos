@@ -9,7 +9,7 @@ const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const TIMEOUT_MS = 15_000;
 const MAX_REDIRECTS = 3;
 // Some sites refuse requests that do not say who they come from.
-const USER_AGENT = 'Mozilla/5.0 (compatible; Athlos; +https://github.com/ZSR17/athlos)';
+const USER_AGENT = 'Mozilla/5.0 (compatible; Halko; +https://github.com/ZSR17/halko)';
 
 export class ImageFetchError extends Error {
   constructor(readonly reason: 'invalid_url' | 'fetch_failed' | 'not_an_image' | 'too_large') {

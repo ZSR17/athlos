@@ -1,9 +1,9 @@
-import { type Appearance, DEFAULT_APPEARANCE } from '@athlos/shared';
+import { type Appearance, DEFAULT_APPEARANCE } from '@halko/shared';
 import { useSyncExternalStore } from 'react';
 import { contrastRatio, isHexColor, onColor } from './color.ts';
 
 // Per-device appearance (localStorage). Phase 4 adds the optional cross-device sync.
-const KEY = 'athlos.appearance';
+const KEY = 'halko.appearance';
 
 const THEMES = {
   dark: { bg: '#0E1012', surface: '#181B1F', surface2: '#22262B', line: '#2C3137', text: '#F2F4F5', muted: '#9AA3AD' },

@@ -1,4 +1,4 @@
-import { type LoginResponse, loginBody } from '@athlos/shared';
+import { type LoginResponse, loginBody } from '@halko/shared';
 import { and, desc, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { createDevice } from '../auth.ts';

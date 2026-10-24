@@ -1,5 +1,5 @@
-import type { Metric, SetTarget } from '@athlos/shared';
-import { EXERCISE_TYPES } from '@athlos/shared';
+import type { Metric, SetTarget } from '@halko/shared';
+import { EXERCISE_TYPES } from '@halko/shared';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useState } from 'react';

@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import type { Crop } from '@athlos/shared';
+import type { Crop } from '@halko/shared';
 import sharp, { type OutputInfo } from 'sharp';
 import type { Db } from '../db/index.ts';
 import { media } from '../db/schema.ts';

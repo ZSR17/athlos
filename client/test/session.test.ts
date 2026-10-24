@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { type LocalExercise, AthlosDb } from '../src/db/db.ts';
+import { type LocalExercise, HalkoDb } from '../src/db/db.ts';
 import {
   addExtraSet,
   exerciseHistory,
@@ -71,7 +71,7 @@ describe('steps', () => {
 });
 
 describe('session flow', () => {
-  let db: AthlosDb;
+  let db: HalkoDb;
   let n = 0;
   const squat: LocalExercise = {
     id: 'squat',
@@ -96,7 +96,7 @@ describe('session flow', () => {
   const plank: LocalExercise = { ...squat, id: 'plank', name: 'Plank', exerciseType: 'duration' };
 
   beforeEach(async () => {
-    db = new AthlosDb(`session-${n++}`);
+    db = new HalkoDb(`session-${n++}`);
     await db.exercises.bulkAdd([squat, plank]);
   });
 

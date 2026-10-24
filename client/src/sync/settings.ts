@@ -6,4 +6,4 @@ interface SyncSettings {
   shareAppearance: boolean;
 }
 
-export const syncSettings = createStore<SyncSettings>({ shareAppearance: false }, 'athlos.sync');
+export const syncSettings = createStore<SyncSettings>({ shareAppearance: false }, 'halko.sync');

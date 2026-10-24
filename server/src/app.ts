@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
-import { API_PREFIX, type HealthResponse } from '@athlos/shared';
+import { API_PREFIX, type HealthResponse } from '@halko/shared';
 import Fastify, { type FastifyServerOptions } from 'fastify';
 import { authHook } from './auth.ts';
 import type { Config } from './config.ts';

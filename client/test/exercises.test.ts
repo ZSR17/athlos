@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { AthlosDb, type LocalExercise } from '../src/db/db.ts';
+import { HalkoDb, type LocalExercise } from '../src/db/db.ts';
 import { createExercise, deleteExercise, updateExercise } from '../src/db/exercises.ts';
 import { createWorkout } from '../src/db/workouts.ts';
 import { exportData, importData } from '../src/lib/backup.ts';
 
-let db: AthlosDb;
+let db: HalkoDb;
 let n = 0;
 const builtin: LocalExercise = {
   id: 'squat',
@@ -38,7 +38,7 @@ const fields = {
 };
 
 beforeEach(async () => {
-  db = new AthlosDb(`exercises-${n++}`);
+  db = new HalkoDb(`exercises-${n++}`);
   await db.exercises.add(builtin);
 });
 
@@ -65,7 +65,7 @@ describe('backup', () => {
     expect(backup.tables.exercises.map((e: { id: string }) => e.id)).toEqual([custom]);
     expect(backup.tables.workouts[0]).not.toHaveProperty('dirty');
 
-    const other = new AthlosDb(`exercises-${n++}`);
+    const other = new HalkoDb(`exercises-${n++}`);
     expect(await importData(backup, other)).toEqual({ imported: 2, skipped: 0 });
     expect(await other.workouts.get(w)).toMatchObject({ name: 'Jambes', dirty: 1 });
 
@@ -73,6 +73,6 @@ describe('backup', () => {
     expect((await importData(backup, other)).skipped).toBe(2);
     expect((await other.workouts.get(w))!.name).toBe('Plus récent');
 
-    await expect(importData({ hello: 'world' }, other)).rejects.toThrow('export Athlos');
+    await expect(importData({ hello: 'world' }, other)).rejects.toThrow('export Halko');
   });
 });

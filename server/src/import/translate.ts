@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { EXERCISE_TYPE_IDS, type ExerciseType, MUSCLE_IDS, type MuscleId } from '@athlos/shared';
+import { EXERCISE_TYPE_IDS, type ExerciseType, MUSCLE_IDS, type MuscleId } from '@halko/shared';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { type Db, nextRev } from '../db/index.ts';

@@ -6,7 +6,7 @@ import {
   type SyncResponse,
   type WireRow,
   wireSchemas,
-} from '@athlos/shared';
+} from '@halko/shared';
 import { and, asc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
 import { type Db, type Tx, instanceId, nextRev } from './db/index.ts';
 import { exercisesToWire, mergeExercise, overridesFor, pushExercise } from './exercises.ts';

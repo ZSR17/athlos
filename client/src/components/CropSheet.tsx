@@ -1,4 +1,4 @@
-import type { Crop } from '@athlos/shared';
+import type { Crop } from '@halko/shared';
 import { type KeyboardEvent, type PointerEvent, useLayoutEffect, useRef, useState } from 'react';
 import { Sheet } from './Sheet.tsx';
 

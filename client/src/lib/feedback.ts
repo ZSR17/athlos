@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createStore } from './store.ts';
 
 // Per-device end-of-rest beep. Volume is relative to the system volume (0.1 to 1).
-export const soundSettings = createStore<{ volume: number }>({ volume: 0.4 }, 'athlos.sound');
+export const soundSettings = createStore<{ volume: number }>({ volume: 0.4 }, 'halko.sound');
 
 // Browsers only let a page play sound after a user gesture: unlockAudio() is called from the
 // "Valider" / "Démarrer" clicks so the end-of-rest beep can play later without a click.

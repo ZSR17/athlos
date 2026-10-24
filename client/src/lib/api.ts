@@ -1,6 +1,6 @@
-import { API_PREFIX, type LoginResponse } from '@athlos/shared';
+import { API_PREFIX, type LoginResponse } from '@halko/shared';
 
-const TOKEN_KEY = 'athlos.token';
+const TOKEN_KEY = 'halko.token';
 
 export class ApiError extends Error {
   constructor(

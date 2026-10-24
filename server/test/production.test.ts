@@ -13,7 +13,7 @@ afterEach(async () => {
 function fakeDist(): string {
   const dir = tempDir();
   fs.mkdirSync(path.join(dir, 'assets'));
-  fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>Athlos</title>');
+  fs.writeFileSync(path.join(dir, 'index.html'), '<!doctype html><title>Halko</title>');
   fs.writeFileSync(path.join(dir, 'assets', 'index-abc123.js'), 'console.log(1)');
   return dir;
 }
@@ -23,12 +23,12 @@ describe('production', () => {
     ctx = await makeTestApp({ STATIC_DIR: fakeDist() });
     const shell = await ctx.app.inject({ method: 'GET', url: '/' });
     expect(shell.statusCode).toBe(200);
-    expect(shell.body).toContain('Athlos');
+    expect(shell.body).toContain('Halko');
     expect(shell.headers['cache-control']).toBe('no-cache');
 
     const route = await ctx.app.inject({ method: 'GET', url: '/seances/123' });
     expect(route.statusCode).toBe(200);
-    expect(route.body).toContain('Athlos');
+    expect(route.body).toContain('Halko');
 
     expect((await ctx.app.inject({ method: 'GET', url: '/assets/index-abc123.js' })).headers['cache-control']).toContain('immutable');
 
@@ -50,7 +50,7 @@ describe('production', () => {
     expect(await backupDatabase(ctx.db, ctx.dataDir, day(10))).toBeNull();
     const files = fs.readdirSync(path.join(ctx.dataDir, 'backups')).sort();
     expect(files).toHaveLength(BACKUPS_KEPT);
-    expect(files.at(-1)).toBe('athlos-2026-01-10.db');
+    expect(files.at(-1)).toBe('halko-2026-01-10.db');
     expect(fs.statSync(path.join(ctx.dataDir, 'backups', files[0]!)).size).toBeGreaterThan(0);
   });
 });

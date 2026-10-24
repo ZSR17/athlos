@@ -1,4 +1,4 @@
-import type { ExerciseType } from '@athlos/shared';
+import type { ExerciseType } from '@halko/shared';
 import { formatDuration, formatKg, formatKm } from './format.ts';
 import { type SetValues, estimate1RM, setVolumeG } from './session.ts';
 

@@ -1,6 +1,6 @@
 # Architecture
 
-Athlos est un monorepo npm en trois paquets TypeScript :
+Halko est un monorepo npm en trois paquets TypeScript :
 
 | Paquet | Contenu |
 | --- | --- |

@@ -1,5 +1,5 @@
 {
-  "name": "@athlos/client",
+  "name": "@halko/client",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -25,7 +25,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource/barlow-condensed": "^5.3.0",
     "@fontsource/manrope": "^5.3.0",
-    "@athlos/shared": "^0.1.0",
+    "@halko/shared": "^0.1.0",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
     "react": "^19.3.1",

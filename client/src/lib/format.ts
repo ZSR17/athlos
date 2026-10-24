@@ -1,5 +1,5 @@
 // Display / input helpers. Storage units are grams, seconds and metres (see shared/domain.ts).
-import { EXERCISE_TYPES, type ExerciseType } from '@athlos/shared';
+import { EXERCISE_TYPES, type ExerciseType } from '@halko/shared';
 
 function trimNumber(n: number, decimals: number): string {
   return Number(n.toFixed(decimals)).toLocaleString('fr-FR', { maximumFractionDigits: decimals });

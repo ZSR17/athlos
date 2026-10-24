@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { type LocalExercise, AthlosDb } from '../src/db/db.ts';
+import { type LocalExercise, HalkoDb } from '../src/db/db.ts';
 import {
   addItem,
   createWorkout,
@@ -13,7 +13,7 @@ import {
   toggleSupersetWithNext,
 } from '../src/db/workouts.ts';
 
-let db: AthlosDb;
+let db: HalkoDb;
 let n = 0;
 
 function exercise(name: string, exerciseType: LocalExercise['exerciseType'] = 'weight_reps'): LocalExercise {
@@ -48,7 +48,7 @@ async function workoutWith(names: string[]) {
 const groups = async (id: string) => (await liveItems(db, id)).map((i) => i.supersetGroup);
 
 beforeEach(() => {
-  db = new AthlosDb(`test-${n++}`);
+  db = new HalkoDb(`test-${n++}`);
 });
 
 describe('workouts', () => {

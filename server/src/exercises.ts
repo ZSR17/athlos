@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { type WireExercise, type WireRow, mediaUrl, wireSchemas } from '@athlos/shared';
+import { type WireExercise, type WireRow, mediaUrl, wireSchemas } from '@halko/shared';
 import { and, eq, inArray } from 'drizzle-orm';
 import { type Db, type Tx, nextRev } from './db/index.ts';
 import { exerciseOverrides, exercises, media } from './db/schema.ts';

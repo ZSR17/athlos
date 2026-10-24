@@ -1,4 +1,4 @@
-import { syncRequest } from '@athlos/shared';
+import { syncRequest } from '@halko/shared';
 import type { FastifyInstance } from 'fastify';
 import type { Db } from '../db/index.ts';
 import { revEvents, sync } from '../sync.ts';

@@ -1,6 +1,6 @@
 # Déploiement
 
-Athlos se déploie en une image Docker qui contient l'API, l'application compilée et ffmpeg. Elle tourne sur
+Halko se déploie en une image Docker qui contient l'API, l'application compilée et ffmpeg. Elle tourne sur
 n'importe quel serveur Linux, arm64 ou amd64, même modeste : 512 Mo de RAM suffisent.
 
 ## Prérequis
@@ -16,24 +16,24 @@ n'importe quel serveur Linux, arm64 ou amd64, même modeste : 512 Mo de RAM suff
 ## Installation avec Docker Compose
 
 ```sh
-git clone https://github.com/ZSR17/athlos.git athlos-src
-docker build -t athlos:latest athlos-src
+git clone https://github.com/ZSR17/halko.git halko-src
+docker build -t halko:latest halko-src
 
-mkdir -p athlos/env athlos/data && cd athlos
+mkdir -p halko/env halko/data && cd halko
 # Mot de passe de l'app : demandé deux fois, seule son empreinte est écrite (fichier en chmod 600)
-docker run --rm -it -v "$PWD/env:/out" athlos:latest \
-  node --import tsx src/scripts/hash-password.ts --write /out/athlos.env
+docker run --rm -it -v "$PWD/env:/out" halko:latest \
+  node --import tsx src/scripts/hash-password.ts --write /out/halko.env
 ```
 
 `compose.yml` :
 
 ```yaml
 services:
-  athlos:
-    image: athlos:latest
-    container_name: athlos
+  halko:
+    image: halko:latest
+    container_name: halko
     restart: unless-stopped
-    env_file: env/athlos.env
+    env_file: env/halko.env
     volumes:
       - ./data:/data                   # base, médias, sauvegardes
     tmpfs:
@@ -45,7 +45,7 @@ services:
 
 ```sh
 docker compose up -d
-docker logs -f athlos     # « library import » : téléchargement de la bibliothèque au premier démarrage
+docker logs -f halko     # « library import » : téléchargement de la bibliothèque au premier démarrage
 ```
 
 Le conteneur tourne avec l'utilisateur `node` (uid 1000) : le dossier `data/` doit lui être accessible en
@@ -66,7 +66,7 @@ le serveur a besoin de la vraie adresse de l'appareil pour limiter les essais de
 
 ## Configuration
 
-Variables d'environnement, dans `env/athlos.env` ou dans `compose.yml` :
+Variables d'environnement, dans `env/halko.env` ou dans `compose.yml` :
 
 | Variable | Défaut | Rôle |
 | --- | --- | --- |
@@ -87,14 +87,14 @@ Ouvrir l'adresse du serveur dans un navigateur récent. Au premier lancement, l'
 - Les médias sont dans `data/media/`. Sauvegarder tout `data/` suffit.
 - Depuis l'app, Réglages → Mes données exporte toutes tes données en JSON.
 
-Restaurer une copie : arrêter le conteneur, remplacer `data/athlos.db` par une copie de `data/backups/`,
-supprimer `athlos.db-wal` et `athlos.db-shm`, puis redémarrer.
+Restaurer une copie : arrêter le conteneur, remplacer `data/halko.db` par une copie de `data/backups/`,
+supprimer `halko.db-wal` et `halko.db-shm`, puis redémarrer.
 
 ## Mettre à jour
 
 ```sh
-git -C athlos-src pull
-docker build -t athlos:latest athlos-src
+git -C halko-src pull
+docker build -t halko:latest halko-src
 docker compose up -d
 ```
 

@@ -1,4 +1,4 @@
-import { type Crop, MAX_UPLOAD_BYTES, type UploadResponse, crop, mediaUrl } from '@athlos/shared';
+import { type Crop, MAX_UPLOAD_BYTES, type UploadResponse, crop, mediaUrl } from '@halko/shared';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { Config } from '../config.ts';

@@ -159,7 +159,7 @@ describe('importFreeExerciseDb', () => {
     expect(img.headers['content-type']).toBe('image/webp');
     expect(img.headers['cache-control']).toContain('immutable');
 
-    const bad = await ctx.app.inject({ method: 'GET', url: '/media/..%2F..%2Fathlos.db' });
+    const bad = await ctx.app.inject({ method: 'GET', url: '/media/..%2F..%2Fhalko.db' });
     expect(bad.statusCode).toBe(404);
   });
 });

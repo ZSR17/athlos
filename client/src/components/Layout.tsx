@@ -19,7 +19,7 @@ export function Layout() {
   return (
     <div className="shell">
       <nav className="sidebar" aria-label="Navigation principale">
-        <span className="brand">Athlos</span>
+        <span className="brand">Halko</span>
         {NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => `side-link${isActive ? ' active' : ''}`}>
             <Icon name={n.icon} size={20} />

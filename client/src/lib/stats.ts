@@ -1,4 +1,4 @@
-import type { ExerciseType } from '@athlos/shared';
+import type { ExerciseType } from '@halko/shared';
 import type { LocalSession, LocalSetLog } from '../db/db.ts';
 import { setVolumeG } from './session.ts';
 

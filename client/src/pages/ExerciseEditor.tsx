@@ -1,7 +1,7 @@
 import { DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { type Crop, EQUIPMENT_LABELS, EXERCISE_TYPE_IDS, EXERCISE_TYPES, type ExerciseType, MUSCLE_IDS, MUSCLES, type MuscleId } from '@athlos/shared';
+import { type Crop, EQUIPMENT_LABELS, EXERCISE_TYPE_IDS, EXERCISE_TYPES, type ExerciseType, MUSCLE_IDS, MUSCLES, type MuscleId } from '@halko/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';

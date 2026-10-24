@@ -1,4 +1,4 @@
-import { EXERCISE_TYPES, type ExerciseType, type Metric, type SetTarget } from '@athlos/shared';
+import { EXERCISE_TYPES, type ExerciseType, type Metric, type SetTarget } from '@halko/shared';
 
 export type ItemMode = 'simple' | 'per_set';
 

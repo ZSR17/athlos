@@ -9,7 +9,7 @@ import { hashPassword } from '../src/lib/password.ts';
 export const TEST_PASSWORD = 'correct horse battery staple';
 
 export function tempDir(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), 'athlos-test-'));
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'halko-test-'));
 }
 
 export async function makeTestApp(env: Record<string, string> = {}) {

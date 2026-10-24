@@ -1,4 +1,4 @@
-import type { ExerciseType, MuscleId, SetKind, SetTarget, Sport } from '@athlos/shared';
+import type { ExerciseType, MuscleId, SetKind, SetTarget, Sport } from '@halko/shared';
 import Dexie, { type EntityTable } from 'dexie';
 import type { ItemMode } from '../lib/targets.ts';
 
@@ -81,7 +81,7 @@ interface MetaRow {
   value: unknown;
 }
 
-export class AthlosDb extends Dexie {
+export class HalkoDb extends Dexie {
   exercises!: EntityTable<LocalExercise, 'id'>;
   workouts!: EntityTable<LocalWorkout, 'id'>;
   workoutItems!: EntityTable<LocalWorkoutItem, 'id'>;
@@ -89,7 +89,7 @@ export class AthlosDb extends Dexie {
   setLogs!: EntityTable<LocalSetLog, 'id'>;
   meta!: EntityTable<MetaRow, 'key'>;
 
-  constructor(name = 'athlos') {
+  constructor(name = 'halko') {
     super(name);
     this.version(1).stores({
       exercises: 'id, name, *primaryMuscles, *secondaryMuscles, source',
@@ -118,4 +118,4 @@ export class AthlosDb extends Dexie {
   }
 }
 
-export const db = new AthlosDb();
+export const db = new HalkoDb();

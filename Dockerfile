@@ -1,5 +1,5 @@
-# Athlos: one image serving the API and the built web app (arm64 or amd64):
-#   docker build -t athlos:latest .
+# Halko: one image serving the API and the built web app (arm64 or amd64):
+#   docker build -t halko:latest .
 
 # 1. Build the client (web app).
 FROM node:22-bookworm-slim AS client

@@ -1,4 +1,4 @@
-import { EQUIPMENT_LABELS, EXERCISE_TYPES, MUSCLES } from '@athlos/shared';
+import { EQUIPMENT_LABELS, EXERCISE_TYPES, MUSCLES } from '@halko/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';

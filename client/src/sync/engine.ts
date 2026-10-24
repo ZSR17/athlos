@@ -1,6 +1,6 @@
-import type { Appearance, PushTable, SyncChanges, SyncResponse, WireExercise } from '@athlos/shared';
+import type { Appearance, PushTable, SyncChanges, SyncResponse, WireExercise } from '@halko/shared';
 import { liveQuery } from 'dexie';
-import { type AthlosDb, type LocalExercise, db as defaultDb } from '../db/db.ts';
+import { type HalkoDb, type LocalExercise, db as defaultDb } from '../db/db.ts';
 import { ApiError, api, getToken } from '../lib/api.ts';
 import { applySharedAppearance, getAppearance, onAppearanceEdited } from '../lib/appearance.ts';
 import { createStore } from '../lib/store.ts';
@@ -37,16 +37,16 @@ interface SharedAppearance {
 
 type Snapshot = Map<string, number>; // "table:id" -> updatedAt pushed
 
-const meta = async <T>(db: AthlosDb, key: string) => (await db.meta.get(key))?.value as T | undefined;
+const meta = async <T>(db: HalkoDb, key: string) => (await db.meta.get(key))?.value as T | undefined;
 
-async function countPending(db: AthlosDb = defaultDb): Promise<number> {
+async function countPending(db: HalkoDb = defaultDb): Promise<number> {
   let n = 0;
   for (const t of TABLES) n += await db[t].where('dirty').equals(1).count();
   if (syncSettings.get().shareAppearance && (await meta<number>(db, 'appearanceDirtyAt'))) n++;
   return n;
 }
 
-export async function collectChanges(db: AthlosDb): Promise<{ changes: SyncChanges; snapshot: Snapshot }> {
+export async function collectChanges(db: HalkoDb): Promise<{ changes: SyncChanges; snapshot: Snapshot }> {
   const changes: Record<string, unknown[]> = {};
   const snapshot: Snapshot = new Map();
   for (const t of TABLES) {
@@ -100,7 +100,7 @@ function toLocalExercise(e: WireExercise): LocalExercise {
 }
 
 // Server rows overwrite local ones unless the local copy was edited later and not pushed yet.
-export async function applyChanges(db: AthlosDb, changes: SyncChanges): Promise<void> {
+export async function applyChanges(db: HalkoDb, changes: SyncChanges): Promise<void> {
   let shared: SharedAppearance | undefined;
   await db.transaction('rw', [db.workouts, db.workoutItems, db.sessions, db.setLogs, db.exercises, db.meta], async () => {
     for (const t of TABLES) {
@@ -131,7 +131,7 @@ export async function applyChanges(db: AthlosDb, changes: SyncChanges): Promise<
 }
 
 // Pushed rows are clean again unless they were edited while the request was in flight.
-export async function markPushed(db: AthlosDb, snapshot: Snapshot, rejected: SyncResponse['rejected']): Promise<void> {
+export async function markPushed(db: HalkoDb, snapshot: Snapshot, rejected: SyncResponse['rejected']): Promise<void> {
   const refused = new Set(rejected.map((r) => `${r.table}:${r.id}`));
   await db.transaction('rw', [db.exercises, db.workouts, db.workoutItems, db.sessions, db.setLogs, db.meta], async () => {
     for (const [key, updatedAt] of snapshot) {
@@ -150,7 +150,7 @@ export async function markPushed(db: AthlosDb, snapshot: Snapshot, rejected: Syn
 
 // The server's data was replaced (another install, a copy of another server): its rows have other ids,
 // so everything local is dropped and downloaded again rather than mixed with the new data.
-async function resetLocalData(db: AthlosDb): Promise<void> {
+async function resetLocalData(db: HalkoDb): Promise<void> {
   await db.transaction('rw', [...TABLES.map((t) => db[t]), db.meta], async () => {
     for (const t of TABLES) await db[t].clear();
     await db.meta.clear();
@@ -160,7 +160,7 @@ async function resetLocalData(db: AthlosDb): Promise<void> {
 let running: Promise<void> | null = null;
 let again = false;
 
-async function run(db: AthlosDb): Promise<void> {
+async function run(db: HalkoDb): Promise<void> {
   try {
     syncStatus.set({ state: 'syncing' });
     let rejected = 0;
@@ -194,7 +194,7 @@ async function run(db: AthlosDb): Promise<void> {
   }
 }
 
-export function syncNow({ db = defaultDb }: { db?: AthlosDb } = {}): Promise<void> {
+export function syncNow({ db = defaultDb }: { db?: HalkoDb } = {}): Promise<void> {
   if (!getToken()) return Promise.resolve();
   if (running) {
     again = true;
@@ -217,7 +217,7 @@ export function requestSync(delayMs = 1200): void {
 }
 
 // Live updates: reads the server's event stream and syncs when another device changed something.
-async function listenEvents(signal: AbortSignal, db: AthlosDb): Promise<void> {
+async function listenEvents(signal: AbortSignal, db: HalkoDb): Promise<void> {
   const res = await fetch('/api/v1/events', { headers: { authorization: `Bearer ${getToken()}` }, signal });
   if (!res.ok || !res.body) throw new Error(`events ${res.status}`);
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -238,7 +238,7 @@ async function listenEvents(signal: AbortSignal, db: AthlosDb): Promise<void> {
 }
 
 // Starts automatic sync for the app's lifetime; returns a stop function.
-export function startSync(db: AthlosDb = defaultDb): () => void {
+export function startSync(db: HalkoDb = defaultDb): () => void {
   let stopped = false;
   let stream: AbortController | null = null;
   let streaming = false;
@@ -313,7 +313,7 @@ export function startSync(db: AthlosDb = defaultDb): () => void {
 
 // Turning on "same colours on all devices": adopt the shared appearance if there is one,
 // otherwise this device's colours become the shared ones.
-export async function enableSharedAppearance(db: AthlosDb = defaultDb): Promise<void> {
+export async function enableSharedAppearance(db: HalkoDb = defaultDb): Promise<void> {
   syncSettings.set({ shareAppearance: true });
   const shared = await meta<SharedAppearance>(db, 'sharedAppearance');
   if (shared) applySharedAppearance(shared.value);

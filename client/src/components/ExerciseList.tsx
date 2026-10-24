@@ -1,4 +1,4 @@
-import { EQUIPMENT_LABELS, EXERCISE_TYPES, MUSCLE_GROUPS, MUSCLES, type MuscleId } from '@athlos/shared';
+import { EQUIPMENT_LABELS, EXERCISE_TYPES, MUSCLE_GROUPS, MUSCLES, type MuscleId } from '@halko/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { type PointerEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';

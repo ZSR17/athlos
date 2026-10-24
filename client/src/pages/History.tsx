@@ -1,4 +1,4 @@
-import type { ExerciseType } from '@athlos/shared';
+import type { ExerciseType } from '@halko/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';

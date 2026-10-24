@@ -1,4 +1,4 @@
-import { MUSCLES, type MuscleId } from '@athlos/shared';
+import { MUSCLES, type MuscleId } from '@halko/shared';
 import bodyPaths from '../assets/body-paths.json';
 import { type RegionState, regionState } from '../lib/muscles.ts';
 

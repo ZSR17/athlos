@@ -1,5 +1,5 @@
 {
-  "name": "@athlos/server",
+  "name": "@halko/server",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "hash-password": "tsx src/scripts/hash-password.ts"
   },
   "dependencies": {
-    "@athlos/shared": "^0.1.0",
+    "@halko/shared": "^0.1.0",
     "@fastify/rate-limit": "^11.2.1",
     "@fastify/static": "^10.1.6",
     "better-sqlite3": "^13.0.3",

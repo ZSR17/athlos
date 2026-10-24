@@ -1,17 +1,17 @@
-import type { SetTarget } from '@athlos/shared';
+import type { SetTarget } from '@halko/shared';
 import { type ItemMode, defaultTargets, doneSets, doneValues, rankKey, toSimple, withDone } from '../lib/targets.ts';
-import { type LocalExercise, type LocalWorkout, type LocalWorkoutItem, type AthlosDb, db as defaultDb } from './db.ts';
+import { type LocalExercise, type LocalWorkout, type LocalWorkoutItem, type HalkoDb, db as defaultDb } from './db.ts';
 import { exerciseHistory } from './sessions.ts';
 
 const now = () => Date.now();
 const touched = () => ({ updatedAt: now(), dirty: 1 as const });
 
-export async function liveItems(db: AthlosDb, workoutId: string): Promise<LocalWorkoutItem[]> {
+export async function liveItems(db: HalkoDb, workoutId: string): Promise<LocalWorkoutItem[]> {
   const items = await db.workoutItems.where('workoutId').equals(workoutId).toArray();
   return items.filter((i) => !i.deleted).sort((a, b) => a.position - b.position);
 }
 
-export async function createWorkout(name: string, db: AthlosDb = defaultDb): Promise<string> {
+export async function createWorkout(name: string, db: HalkoDb = defaultDb): Promise<string> {
   const id = crypto.randomUUID();
   const last = (await db.workouts.orderBy('position').last())?.position ?? -1;
   const t = now();
@@ -29,18 +29,18 @@ export async function createWorkout(name: string, db: AthlosDb = defaultDb): Pro
   return id;
 }
 
-export async function updateWorkout(id: string, patch: Partial<Pick<LocalWorkout, 'name' | 'note'>>, db: AthlosDb = defaultDb) {
+export async function updateWorkout(id: string, patch: Partial<Pick<LocalWorkout, 'name' | 'note'>>, db: HalkoDb = defaultDb) {
   await db.workouts.update(id, { ...patch, ...touched() });
 }
 
-export async function deleteWorkout(id: string, db: AthlosDb = defaultDb) {
+export async function deleteWorkout(id: string, db: HalkoDb = defaultDb) {
   await db.transaction('rw', db.workouts, db.workoutItems, async () => {
     await db.workouts.update(id, { deleted: 1, ...touched() });
     await db.workoutItems.where('workoutId').equals(id).modify({ deleted: 1, ...touched() });
   });
 }
 
-export async function duplicateWorkout(id: string, db: AthlosDb = defaultDb): Promise<string> {
+export async function duplicateWorkout(id: string, db: HalkoDb = defaultDb): Promise<string> {
   const source = await db.workouts.get(id);
   if (!source) throw new Error('workout not found');
   const copyId = await createWorkout(`${source.name} (copie)`, db);
@@ -66,7 +66,7 @@ export async function duplicateWorkout(id: string, db: AthlosDb = defaultDb): Pr
 // A newly added exercise starts from what is known of it: the plan of another workout using it (sets,
 // warm-ups, rests) with the values of the last time it was done; else the sets done last time; else
 // the defaults of its type.
-async function startingPlan(exercise: LocalExercise, db: AthlosDb): Promise<{ mode: ItemMode; targets: SetTarget[] }> {
+async function startingPlan(exercise: LocalExercise, db: HalkoDb): Promise<{ mode: ItemMode; targets: SetTarget[] }> {
   const others = (await db.workoutItems.where('exerciseId').equals(exercise.id).toArray())
     .filter((i) => !i.deleted)
     .sort((a, b) => b.updatedAt - a.updatedAt);
@@ -89,7 +89,7 @@ async function startingPlan(exercise: LocalExercise, db: AthlosDb): Promise<{ mo
   return { mode: 'simple', targets: defaultTargets(exercise.exerciseType) };
 }
 
-export async function addItem(workoutId: string, exercise: LocalExercise, db: AthlosDb = defaultDb): Promise<string> {
+export async function addItem(workoutId: string, exercise: LocalExercise, db: HalkoDb = defaultDb): Promise<string> {
   const items = await liveItems(db, workoutId);
   const { mode, targets } = await startingPlan(exercise, db);
   const id = crypto.randomUUID();
@@ -115,26 +115,26 @@ export async function addItem(workoutId: string, exercise: LocalExercise, db: At
 export async function updateItem(
   id: string,
   patch: Partial<Pick<LocalWorkoutItem, 'targets' | 'note' | 'mode'>>,
-  db: AthlosDb = defaultDb,
+  db: HalkoDb = defaultDb,
 ) {
   await db.workoutItems.update(id, { ...patch, ...touched() });
 }
 
-export async function setItemMode(item: LocalWorkoutItem, mode: ItemMode, db: AthlosDb = defaultDb) {
+export async function setItemMode(item: LocalWorkoutItem, mode: ItemMode, db: HalkoDb = defaultDb) {
   if (item.mode === mode) return;
   const targets: SetTarget[] = mode === 'simple' ? toSimple(item.targets) : item.targets;
   await updateItem(item.id, { mode, targets }, db);
 }
 
 // Rewrites positions so the list of workouts matches `orderedIds`.
-export async function reorderWorkouts(orderedIds: string[], db: AthlosDb = defaultDb) {
+export async function reorderWorkouts(orderedIds: string[], db: HalkoDb = defaultDb) {
   await db.transaction('rw', db.workouts, async () => {
     for (const [position, id] of orderedIds.entries()) await db.workouts.update(id, { position, ...touched() });
   });
 }
 
 // Rewrites positions so the list order matches `orderedIds`, then cleans up broken supersets.
-export async function reorderItems(workoutId: string, orderedIds: string[], db: AthlosDb = defaultDb) {
+export async function reorderItems(workoutId: string, orderedIds: string[], db: HalkoDb = defaultDb) {
   await db.transaction('rw', db.workoutItems, async () => {
     for (const [position, id] of orderedIds.entries()) {
       await db.workoutItems.update(id, { position, ...touched() });
@@ -143,7 +143,7 @@ export async function reorderItems(workoutId: string, orderedIds: string[], db: 
   });
 }
 
-export async function removeItem(item: LocalWorkoutItem, db: AthlosDb = defaultDb) {
+export async function removeItem(item: LocalWorkoutItem, db: HalkoDb = defaultDb) {
   await db.transaction('rw', db.workoutItems, async () => {
     await db.workoutItems.update(item.id, { deleted: 1, ...touched() });
     await normalizeSupersets(item.workoutId, db);
@@ -151,7 +151,7 @@ export async function removeItem(item: LocalWorkoutItem, db: AthlosDb = defaultD
 }
 
 // Links `item` with the next exercise into a superset, or unlinks them if already linked.
-export async function toggleSupersetWithNext(item: LocalWorkoutItem, db: AthlosDb = defaultDb) {
+export async function toggleSupersetWithNext(item: LocalWorkoutItem, db: HalkoDb = defaultDb) {
   await db.transaction('rw', db.workoutItems, async () => {
     const items = await liveItems(db, item.workoutId);
     const idx = items.findIndex((i) => i.id === item.id);
@@ -179,7 +179,7 @@ export async function toggleSupersetWithNext(item: LocalWorkoutItem, db: AthlosD
 }
 
 // A superset must be a run of ≥ 2 consecutive items: drop groups that became singletons or got split.
-async function normalizeSupersets(workoutId: string, db: AthlosDb = defaultDb) {
+async function normalizeSupersets(workoutId: string, db: HalkoDb = defaultDb) {
   const items = await liveItems(db, workoutId);
   const seen = new Set<string>();
   for (let start = 0; start < items.length; ) {

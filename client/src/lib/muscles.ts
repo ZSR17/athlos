@@ -1,4 +1,4 @@
-import type { MuscleId } from '@athlos/shared';
+import type { MuscleId } from '@halko/shared';
 
 // Body-map regions (react-native-body-highlighter slugs) -> our muscle ids.
 // Regions not listed (head, hands, knees…) are drawn as plain body.
