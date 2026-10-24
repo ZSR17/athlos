@@ -24,6 +24,8 @@ export function OneRepMax() {
   const lifted = useLiveQuery(() => liftedSets(), []);
   const [exerciseId, setExerciseId] = useState('');
   const [typed, setTyped] = useState<{ weightG?: number; reps?: number }>({});
+  // Reps in reserve: the formulas assume a set taken to failure, so those are counted as done.
+  const [reserve, setReserve] = useState(0);
 
   // Picking an exercise fills in its best set for the chosen formula, until the values are edited by hand.
   const best = (lifted?.find((l) => l.exercise.id === exerciseId)?.sets ?? [])
@@ -37,7 +39,8 @@ export function OneRepMax() {
     setTyped({ weightG, reps, ...patch });
     setExerciseId('');
   };
-  const max = weightG && reps ? oneRepMax(weightG, reps, formula) : undefined;
+  const toFailure = reps && Math.min(MAX_REPS, reps + reserve);
+  const max = weightG && toFailure ? oneRepMax(weightG, toFailure, formula) : undefined;
 
   return (
     <div className="page" style={{ maxWidth: 720 }}>
@@ -83,6 +86,23 @@ export function OneRepMax() {
               onChange={(v) => edit({ reps: Math.max(1, v) })}
             />
           </div>
+          <div className="stack" style={{ gap: 6 }}>
+            <span className="label">En réserve</span>
+            <Stepper
+              label="Répétitions en réserve"
+              unit="reps"
+              value={reserve}
+              step={1}
+              max={10}
+              format={formatReps}
+              parse={(t) => {
+                const n = parseCount(t);
+                return n === null ? null : Math.min(10, n);
+              }}
+              inputMode="numeric"
+              onChange={setReserve}
+            />
+          </div>
         </div>
       </section>
 
@@ -99,12 +119,17 @@ export function OneRepMax() {
 
       {max !== undefined && (
         <section className="stack">
-          {reps! > 10 && (
+          {toFailure! > 10 && (
             <div className="card notice-warn">Au-delà de 10 répétitions, l’estimation devient beaucoup moins précise.</div>
           )}
           <div className="card stack" style={{ gap: 4 }}>
             <span className="label">1RM estimé</span>
             <span className="title">{kg(round(max))}</span>
+            {reserve > 0 && (
+              <span className="small muted">
+                Compté comme {toFailure} répétitions jusqu’à l’échec ({reps} faites + {reserve} en réserve)
+              </span>
+            )}
           </div>
           <div className="card percent-table">
             {PERCENTAGES.map((p) => {
