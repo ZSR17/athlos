@@ -1,15 +1,18 @@
 // Usage: npm run seed:history
-// Fills a development database with three workouts (Push / Pull / Jambes) and 12 weeks of finished
-// sessions, with a steady progression, a few missed reps and a lighter week, to try the history,
-// records and charts. Rows have fixed ids: running it again rewrites the same history.
+// Fills a development database with three workouts (Push / Pull / Jambes) and 18 months of finished
+// sessions: a progression that slows down over time, a lighter week every 8 weeks, a 3-week break and
+// a few missed reps, to try the history, records and charts (and their periods). Rows have fixed ids:
+// running it again rewrites the same history.
 import type { SetKind, SetTarget } from '@halko/shared';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, like } from 'drizzle-orm';
 import { loadConfig } from '../config.ts';
-import { ensureOwner, openDb } from '../db/index.ts';
+import { ensureOwner, nextRev, openDb } from '../db/index.ts';
 import * as schema from '../db/schema.ts';
 import { sync } from '../sync.ts';
 
-const weeks = 12;
+const weeks = 78;
+// Weeks without any session, counted from the first one.
+const BREAK = { from: 30, to: 32 };
 
 // kg: starting load, step: kg added each week (0 for body weight), or seconds for a timed exercise.
 interface Plan {
@@ -89,12 +92,14 @@ const workoutItems: unknown[] = [];
 const sessions: unknown[] = [];
 const setLogs: unknown[] = [];
 
-// Load or reps of a plan for a given week; week 8 is a lighter one.
+// Load or reps of a plan for a given week. Progress is quick at first, then slows down (about 12 weekly
+// steps in the first 3 months, 24 after 18), and every 8th week is a lighter one.
 function load(plan: Plan, week: number) {
-  const deload = week === 7;
-  if (plan.seconds !== undefined) return { seconds: plan.seconds + week * 5 };
-  if (plan.kg === undefined) return { reps: plan.reps + Math.floor(week / 3) };
-  const kg = roundTo((plan.kg + plan.step! * week) * (deload ? 0.85 : 1), plan.step! < 1 ? 0.5 : 1.25);
+  const steps = 12 * Math.log(1 + week / 12);
+  const deload = week % 8 === 7;
+  if (plan.seconds !== undefined) return { seconds: plan.seconds + Math.round(steps) * 5 };
+  if (plan.kg === undefined) return { reps: plan.reps + Math.floor(steps / 3) };
+  const kg = roundTo((plan.kg + plan.step! * steps) * (deload ? 0.85 : 1), plan.step! < 1 ? 0.5 : 1.25);
   return { kg };
 }
 
@@ -139,7 +144,7 @@ let count = 0;
 for (let week = 0; week < weeks; week++) {
   WORKOUTS.forEach((w, wi) => {
     const begin = start.getTime() + (week * 7 + wi * 2) * DAY + Math.round((random() - 0.5) * 2 * 3_600_000);
-    if (begin > now - 3_600_000 || random() < 0.08) return;
+    if (begin > now - 3_600_000 || random() < 0.08 || (week >= BREAK.from && week <= BREAK.to)) return;
     const sessionId = `seed-s-${week}-${w.key}`;
     let at = begin + 5 * 60_000;
     w.items.forEach((plan, ii) => {
@@ -178,10 +183,27 @@ const rejected = [
   ...sync(db, userId, Number.MAX_SAFE_INTEGER, { sessions }).rejected,
   ...sync(db, userId, Number.MAX_SAFE_INTEGER, { setLogs }).rejected,
 ];
+
+// Rows of an earlier run that this one did not write again (a session skipped this time…) are deleted,
+// with a new revision so that devices drop them at their next sync.
+const written = new Set([...sessions, ...setLogs].map((r) => (r as { id: string }).id));
+let removed = 0;
+db.transaction((tx) => {
+  for (const table of [schema.sessions, schema.setLogs]) {
+    for (const { id } of tx.select({ id: table.id }).from(table).where(and(like(table.id, 'seed-%'), eq(table.deleted, false))).all()) {
+      if (written.has(id)) continue;
+      tx.update(table).set({ deleted: true, updatedAt: now, rev: nextRev(tx) }).where(eq(table.id, id)).run();
+      removed++;
+    }
+  }
+});
 db.$client.close();
 
 if (rejected.length) {
   console.error(`${rejected.length} lignes refusées :`, rejected.slice(0, 5));
   process.exit(1);
 }
-console.log(`${config.dataDir} : séances Push, Pull et Jambes, ${count} séances faites sur ${weeks} semaines, ${setLogs.length} séries.`);
+console.log(
+  `${config.dataDir} : séances Push, Pull et Jambes, ${count} séances faites sur ${weeks} semaines, ${setLogs.length} séries` +
+    (removed ? `, ${removed} lignes d'un passage précédent supprimées.` : '.'),
+);
