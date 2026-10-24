@@ -39,13 +39,6 @@ export function metricsForType(type: ExerciseType): ProgressMetric[] {
       return [
         maxWeight('Charge max'),
         {
-          id: '1rm',
-          label: '1RM estimé',
-          format: kg,
-          best: (s) => max(working(s).map((x) => (x.weightG && x.reps ? estimate1RM(x.weightG, x.reps) : undefined))),
-          higherIsBetter: true,
-        },
-        {
           id: 'volume',
           label: 'Volume',
           format: kg,
@@ -53,6 +46,13 @@ export function metricsForType(type: ExerciseType): ProgressMetric[] {
             const v = working(s).reduce((n, x) => n + setVolumeG(type, x), 0);
             return v > 0 ? v : undefined;
           },
+          higherIsBetter: true,
+        },
+        {
+          id: '1rm',
+          label: '1RM estimé',
+          format: kg,
+          best: (s) => max(working(s).map((x) => (x.weightG && x.reps ? estimate1RM(x.weightG, x.reps) : undefined))),
           higherIsBetter: true,
         },
       ];
