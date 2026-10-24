@@ -91,7 +91,7 @@ export function Plates() {
 
   return (
     <div className="page" style={{ maxWidth: 720 }}>
-      <h1 className="title">Disques</h1>
+      <h1 className="title">Calculateur de disques</h1>
 
       <section className="stack">
         <h2 className="section-title">Charge</h2>

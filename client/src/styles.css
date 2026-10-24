@@ -139,7 +139,7 @@ h3 {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    width: 232px;
+    width: 256px;
     flex-shrink: 0;
     padding: 28px 16px;
     background: var(--surface);
@@ -974,7 +974,7 @@ h3 {
 }
 @media (min-width: 900px) {
   .rest-bar {
-    left: 232px;
+    left: 256px;
   }
 }
 /* Room for the rest bar under the last controls. */

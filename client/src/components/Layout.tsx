@@ -3,11 +3,12 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { db } from '../db/db.ts';
 import { Icon, type IconName } from './Icon.tsx';
 
-const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
+// `short` replaces the label in the bottom tab bar, where long labels do not fit.
+const NAV: { to: string; label: string; short?: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'Séances', icon: 'home', end: true },
   { to: '/exercices', label: 'Exercices', icon: 'dumbbell' },
   { to: '/historique', label: 'Historique', icon: 'chart' },
-  { to: '/disques', label: 'Disques', icon: 'plate' },
+  { to: '/disques', label: 'Calculateur de disques', short: 'Calculateur', icon: 'plate' },
   { to: '/reglages', label: 'Réglages', icon: 'settings' },
 ];
 
@@ -44,7 +45,7 @@ export function Layout() {
         {NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.end} className={({ isActive }) => `tab${isActive ? ' active' : ''}`}>
             <Icon name={n.icon} size={24} />
-            {n.label}
+            {n.short ?? n.label}
           </NavLink>
         ))}
       </nav>
