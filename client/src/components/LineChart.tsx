@@ -8,11 +8,13 @@ interface Point {
 const H = 220;
 const PAD = { top: 16, right: 56, bottom: 28, left: 44 };
 
-function niceTicks(min: number, max: number, count = 4): number[] {
+// Round steps; whole ones only when the values are whole (reps), so the axis shows no « 2,5 reps ».
+function niceTicks(min: number, max: number, whole: boolean, count = 4): number[] {
   if (min === max) return [min];
   const raw = (max - min) / (count - 1);
   const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? raw;
+  const steps = [1, 2, 2.5, 5, 10].map((m) => m * mag).filter((s) => !whole || Number.isInteger(s));
+  const step = steps.find((s) => s >= raw) ?? (whole ? Math.ceil(raw) : raw);
   const start = Math.floor(min / step) * step;
   const ticks = [];
   for (let v = start; v <= max + step * 0.5; v += step) ticks.push(Number(v.toFixed(6)));
@@ -54,7 +56,7 @@ export function LineChart({
   const high = Math.max(...ys);
   // Room under the lowest point, so it does not sit on the bottom edge as if it were 0 (never below 0).
   const room = (high - low) * 0.2 || Math.abs(high) * 0.1 || 1;
-  const ticks = niceTicks(low >= 0 ? Math.max(0, low - room) : low - room, high);
+  const ticks = niceTicks(low >= 0 ? Math.max(0, low - room) : low - room, high, ys.every(Number.isInteger));
   const yMin = Math.min(ticks[0]!, ...ys);
   const yMax = Math.max(ticks[ticks.length - 1]!, ...ys);
   const t0 = points[0]!.t;
