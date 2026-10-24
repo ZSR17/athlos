@@ -758,6 +758,22 @@ h3 {
   font-weight: 700;
   outline: none;
 }
+.cell-input.static {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Not the small grey label of a field: the value itself. */
+.field > .cell-input.static {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+span.kind-btn {
+  display: flex;
+  align-items: center;
+  cursor: default;
+}
 .set-row {
   display: grid;
   grid-template-columns: 56px repeat(var(--cols), minmax(0, 1fr)) 64px 36px;
@@ -1358,9 +1374,6 @@ select.input {
 }
 .record-stat .value {
   font-size: 22px;
-}
-.tag-warmup {
-  color: var(--warn);
 }
 /* The name of a workout being edited, in the place and size of its title. */
 .title-input {

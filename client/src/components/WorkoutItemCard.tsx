@@ -1,10 +1,10 @@
-import type { Metric, SetTarget } from '@halko/shared';
+import type { ExerciseType, Metric, SetTarget } from '@halko/shared';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { LocalExercise, LocalWorkoutItem } from '../db/db.ts';
-import { formatDuration, formatKg, formatKm, formatSetValues, parseCount, parseDuration, parseKg, parseKm } from '../lib/format.ts';
+import { formatDuration, formatKg, formatKm, parseCount, parseDuration, parseKg, parseKm } from '../lib/format.ts';
 import { addSet, metricLabel, metricsFor, removeSet, setSimpleCount, updateAll, updateOne } from '../lib/targets.ts';
 import { withMode } from '../lib/workoutDraft.ts';
 import { thumbUrl } from './ExerciseMedia.tsx';
@@ -27,7 +27,7 @@ interface Props {
   supersetLabel?: string;
 }
 
-// Top of the card, the same read-only and while editing: picture, name, number of sets; `children` on the right.
+// Top of the card: picture, name, number of sets; `children` on the right.
 function ItemHeader({ item, exercise, supersetLabel, children }: Props & { children: ReactNode }) {
   return (
     <>
@@ -53,6 +53,157 @@ function ItemHeader({ item, exercise, supersetLabel, children }: Props & { child
   );
 }
 
+// A value of the sets: typed in while editing, plain text otherwise (same place, same look).
+function Value(props: {
+  value: number | undefined;
+  format: (v: number | undefined) => string;
+  parse: (s: string) => number | null;
+  onCommit?: (v: number) => void;
+  label: string;
+  numeric?: boolean;
+  className?: string;
+}) {
+  const className = props.className ?? 'cell-input';
+  if (!props.onCommit) return <span className={`${className} static`}>{props.format(props.value) || '—'}</span>;
+  return (
+    <ValueInput
+      value={props.value}
+      format={props.format}
+      parse={props.parse}
+      onCommit={props.onCommit}
+      label={props.label}
+      inputMode={props.numeric ? 'numeric' : 'decimal'}
+      className={className}
+    />
+  );
+}
+
+// The planned sets, the same read-only and while editing. `onChange` (editing only) receives the changed item.
+function ItemSets({ item, type, onChange }: { item: LocalWorkoutItem; type: ExerciseType; onChange?: (item: LocalWorkoutItem) => void }) {
+  const metrics = metricsFor(type);
+  const first = item.targets[0];
+  const edit = onChange && ((targets: SetTarget[]) => onChange({ ...item, targets }));
+  const commit = <T,>(fn: (v: T) => SetTarget[]) => edit && ((v: T) => edit(fn(v)));
+  const numeric = (m: Metric) => m === 'duration' || m === 'reps';
+
+  if (item.mode === 'simple' && first) {
+    return (
+      <div className="fields">
+        <label className="field">
+          <span>Séries</span>
+          <Value
+            value={item.targets.length}
+            format={count}
+            parse={(s) => {
+              const n = parseCount(s);
+              return n && n <= 30 ? n : null;
+            }}
+            onCommit={commit((n: number) => setSimpleCount(item.targets, n))}
+            label="Nombre de séries"
+            numeric
+          />
+        </label>
+        {metrics.map((m) => (
+          <label key={m} className="field">
+            <span>{metricLabel(m, type)}</span>
+            <Value
+              value={first[METRIC_IO[m].key] as number | undefined}
+              format={METRIC_IO[m].format}
+              parse={METRIC_IO[m].parse}
+              onCommit={commit((v: number) => updateAll(item.targets, { [METRIC_IO[m].key]: v }))}
+              label={metricLabel(m, type)}
+              numeric={numeric(m)}
+            />
+          </label>
+        ))}
+        <label className="field">
+          <span>Repos</span>
+          <Value
+            value={first.restS}
+            format={formatDuration}
+            parse={parseDuration}
+            onCommit={commit((v: number) => updateAll(item.targets, { restS: v }))}
+            label="Repos entre les séries"
+            numeric
+          />
+        </label>
+      </div>
+    );
+  }
+
+  return (
+    <div className="stack" style={{ gap: 4, ['--cols' as string]: metrics.length }}>
+      <div className="set-row set-head">
+        <span>Série</span>
+        {metrics.map((m) => (
+          <span key={m}>{metricLabel(m, type)}</span>
+        ))}
+        <span>Repos</span>
+        <span />
+      </div>
+      {item.targets.map((t, idx) => {
+        const workingIndex = item.targets.slice(0, idx + 1).filter((x) => x.kind !== 'warmup').length;
+        const kind = t.kind === 'warmup' ? 'Écha.' : workingIndex;
+        return (
+          <div key={idx} className="set-row">
+            {edit ? (
+              <button
+                type="button"
+                className={`kind-btn${t.kind === 'warmup' ? ' warmup' : ''}`}
+                onClick={() => edit(updateOne(item.targets, idx, { kind: t.kind === 'warmup' ? 'normal' : 'warmup' }))}
+                aria-label={`Série ${idx + 1} : ${t.kind === 'warmup' ? 'échauffement' : 'série de travail'}, cliquer pour changer`}
+              >
+                {kind}
+              </button>
+            ) : (
+              <span className={`kind-btn${t.kind === 'warmup' ? ' warmup' : ''}`}>{kind}</span>
+            )}
+            {metrics.map((m) => (
+              <Value
+                key={m}
+                value={t[METRIC_IO[m].key] as number | undefined}
+                format={METRIC_IO[m].format}
+                parse={METRIC_IO[m].parse}
+                onCommit={commit((v: number) => updateOne(item.targets, idx, { [METRIC_IO[m].key]: v }))}
+                label={`Série ${idx + 1}, ${metricLabel(m, type)}`}
+                numeric={numeric(m)}
+              />
+            ))}
+            <Value
+              className="cell-input rest"
+              value={t.restS}
+              format={formatDuration}
+              parse={parseDuration}
+              onCommit={commit((v: number) => updateOne(item.targets, idx, { restS: v }))}
+              label={`Série ${idx + 1}, repos`}
+              numeric
+            />
+            {edit ? (
+              <button
+                type="button"
+                className="icon-btn"
+                style={{ background: 'transparent', width: 36, height: 36 }}
+                onClick={() => edit(removeSet(item.targets, idx))}
+                disabled={item.targets.length <= 1}
+                aria-label={`Supprimer la série ${idx + 1}`}
+              >
+                <Icon name="close" size={16} />
+              </button>
+            ) : (
+              <span />
+            )}
+          </div>
+        );
+      })}
+      {edit && (
+        <button type="button" className="btn btn-ghost" onClick={() => edit(addSet(item.targets, type))}>
+          + Ajouter une série
+        </button>
+      )}
+    </div>
+  );
+}
+
 // An exercise of a workout being edited: changes go to `onChange`, saved with the whole workout.
 export function WorkoutItemCard({
   item,
@@ -66,11 +217,7 @@ export function WorkoutItemCard({
   });
   const [note, setNote] = useState(item.note ?? '');
   useEffect(() => setNote(item.note ?? ''), [item.note]);
-
   const type = exercise?.exerciseType ?? 'weight_reps';
-  const metrics = metricsFor(type);
-  const setTargets = (targets: SetTarget[]) => onChange({ ...item, targets });
-  const first = item.targets[0];
 
   return (
     <article
@@ -103,109 +250,7 @@ export function WorkoutItemCard({
         </button>
       </div>
 
-      {item.mode === 'simple' && first && (
-        <div className="fields">
-          <label className="field">
-            <span>Séries</span>
-            <ValueInput
-              value={item.targets.length}
-              format={count}
-              parse={(s) => {
-                const n = parseCount(s);
-                return n && n <= 30 ? n : null;
-              }}
-              onCommit={(n) => setTargets(setSimpleCount(item.targets, n))}
-              label="Nombre de séries"
-              inputMode="numeric"
-            />
-          </label>
-          {metrics.map((m) => (
-            <label key={m} className="field">
-              <span>{metricLabel(m, type)}</span>
-              <ValueInput
-                value={first[METRIC_IO[m].key] as number | undefined}
-                format={METRIC_IO[m].format}
-                parse={METRIC_IO[m].parse}
-                onCommit={(v) => setTargets(updateAll(item.targets, { [METRIC_IO[m].key]: v }))}
-                label={metricLabel(m, type)}
-                inputMode={m === 'duration' || m === 'reps' ? 'numeric' : 'decimal'}
-              />
-            </label>
-          ))}
-          <label className="field">
-            <span>Repos</span>
-            <ValueInput
-              value={first.restS}
-              format={formatDuration}
-              parse={parseDuration}
-              onCommit={(v) => setTargets(updateAll(item.targets, { restS: v }))}
-              label="Repos entre les séries"
-              inputMode="numeric"
-            />
-          </label>
-        </div>
-      )}
-
-      {item.mode === 'per_set' && (
-        <div className="stack" style={{ gap: 4, ['--cols' as string]: metrics.length }}>
-          <div className="set-row set-head">
-            <span>Série</span>
-            {metrics.map((m) => (
-              <span key={m}>{metricLabel(m, type)}</span>
-            ))}
-            <span>Repos</span>
-            <span />
-          </div>
-          {item.targets.map((t, idx) => {
-            const workingIndex = item.targets.slice(0, idx + 1).filter((x) => x.kind !== 'warmup').length;
-            return (
-              <div key={idx} className="set-row">
-                <button
-                  type="button"
-                  className={`kind-btn${t.kind === 'warmup' ? ' warmup' : ''}`}
-                  onClick={() => setTargets(updateOne(item.targets, idx, { kind: t.kind === 'warmup' ? 'normal' : 'warmup' }))}
-                  aria-label={`Série ${idx + 1} : ${t.kind === 'warmup' ? 'échauffement' : 'série de travail'}, cliquer pour changer`}
-                >
-                  {t.kind === 'warmup' ? 'Écha.' : workingIndex}
-                </button>
-                {metrics.map((m) => (
-                  <ValueInput
-                    key={m}
-                    value={t[METRIC_IO[m].key] as number | undefined}
-                    format={METRIC_IO[m].format}
-                    parse={METRIC_IO[m].parse}
-                    onCommit={(v) => setTargets(updateOne(item.targets, idx, { [METRIC_IO[m].key]: v }))}
-                    label={`Série ${idx + 1}, ${metricLabel(m, type)}`}
-                    inputMode={m === 'duration' || m === 'reps' ? 'numeric' : 'decimal'}
-                  />
-                ))}
-                <ValueInput
-                  className="cell-input rest"
-                  value={t.restS}
-                  format={formatDuration}
-                  parse={parseDuration}
-                  onCommit={(v) => setTargets(updateOne(item.targets, idx, { restS: v }))}
-                  label={`Série ${idx + 1}, repos`}
-                  inputMode="numeric"
-                />
-                <button
-                  type="button"
-                  className="icon-btn"
-                  style={{ background: 'transparent', width: 36, height: 36 }}
-                  onClick={() => setTargets(removeSet(item.targets, idx))}
-                  disabled={item.targets.length <= 1}
-                  aria-label={`Supprimer la série ${idx + 1}`}
-                >
-                  <Icon name="close" size={16} />
-                </button>
-              </div>
-            );
-          })}
-          <button type="button" className="btn btn-ghost" onClick={() => setTargets(addSet(item.targets, type))}>
-            + Ajouter une série
-          </button>
-        </div>
-      )}
+      <ItemSets item={item} type={type} onChange={onChange} />
 
       <label className="note-input">
         <Icon name="pencil" size={16} />
@@ -221,9 +266,8 @@ export function WorkoutItemCard({
   );
 }
 
-// Read-only version of the card: the exercise and its planned sets, warm-ups apart.
+// The same card read-only: the planned sets as they are shown while editing, without the controls.
 export function WorkoutItemView({ item, exercise, supersetLabel }: Props) {
-  const type = exercise?.exerciseType ?? 'weight_reps';
   return (
     <article className={`item-card${supersetLabel ? ' in-superset' : ''}`}>
       <Link to={`/exercices/${item.exerciseId}`} style={{ color: 'var(--text)', textDecoration: 'none' }}>
@@ -231,16 +275,10 @@ export function WorkoutItemView({ item, exercise, supersetLabel }: Props) {
           <Icon name="chevron" size={18} />
         </ItemHeader>
       </Link>
-      <div className="chips-wrap" style={{ gap: 6 }}>
-        {item.targets.map((t, k) => (
-          <span key={k} className={`tag${t.kind === 'warmup' ? ' tag-warmup' : ''}`}>
-            {t.kind === 'warmup' && 'Échauff. '}
-            {formatSetValues(type, t) || '—'}
-          </span>
-        ))}
-      </div>
+      <ItemSets item={item} type={exercise?.exerciseType ?? 'weight_reps'} />
       {item.note && (
-        <p className="small muted" style={{ margin: 0, lineHeight: 1.45 }}>
+        <p className="note-input" style={{ margin: 0, fontSize: 13 }}>
+          <Icon name="pencil" size={16} />
           {item.note}
         </p>
       )}
