@@ -1210,9 +1210,19 @@ select.input {
   place-items: center;
   cursor: pointer;
 }
-.media-tile.removed img {
-  opacity: 0.35;
-  filter: grayscale(1);
+.media-tile.add-tile {
+  background: none;
+}
+.add-tile .add {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed var(--line);
+  border-radius: inherit;
+  background: none;
+  color: var(--accent-text);
+  cursor: pointer;
 }
 .media-tile .badge {
   position: absolute;
