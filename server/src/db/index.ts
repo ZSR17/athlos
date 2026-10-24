@@ -13,24 +13,8 @@ export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 const migrationsFolder = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../drizzle');
 
-// Halko used to be called Athlos: an install from that time gets its database (and its WAL files and
-// daily backups) under the new name, once. To remove once every install has started with it.
-function renameLegacyFiles(dataDir: string): void {
-  if (fs.existsSync(path.join(dataDir, 'halko.db')) || !fs.existsSync(path.join(dataDir, 'athlos.db'))) return;
-  for (const suffix of ['', '-wal', '-shm']) {
-    const from = path.join(dataDir, `athlos.db${suffix}`);
-    if (fs.existsSync(from)) fs.renameSync(from, path.join(dataDir, `halko.db${suffix}`));
-  }
-  const backups = path.join(dataDir, 'backups');
-  if (!fs.existsSync(backups)) return;
-  for (const file of fs.readdirSync(backups)) {
-    if (/^athlos-\d{4}-\d{2}-\d{2}\.db$/.test(file)) fs.renameSync(path.join(backups, file), path.join(backups, `halko${file.slice(6)}`));
-  }
-}
-
 export function openDb(dataDir: string): Db {
   fs.mkdirSync(dataDir, { recursive: true });
-  renameLegacyFiles(dataDir);
   const sqlite = new Database(path.join(dataDir, 'halko.db'));
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
