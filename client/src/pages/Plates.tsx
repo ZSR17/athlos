@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon.tsx';
 import { Stepper } from '../components/Stepper.tsx';
@@ -56,45 +56,31 @@ function Result({ result, targetG, onUse }: { result: PlateResult; targetG: numb
   );
 }
 
+function answer(barG: number, targetG: number, plates: Plate[]): { error: string } | { result: PlateResult } {
+  if (targetG < barG) return { error: 'Le poids voulu est plus léger que la barre.' };
+  if (targetG > barG && !plates.some((p) => p.weightG > 0 && p.count >= 2))
+    return { error: 'Ajoute d’abord tes disques, au moins deux de chaque poids (un de chaque côté).' };
+  return { result: loadPlates(barG, targetG, plates) };
+}
+
 export function Plates() {
-  const { barG, plates } = plateSettings.use();
+  const { barG, plates, targetG, calculated } = plateSettings.use();
+  const [params, setParams] = useSearchParams();
+
   // Opened from the 1RM calculator with a weight (in grams): calculated straight away.
-  const [params] = useSearchParams();
-  const [targetG, setTargetG] = useState(() => Number(params.get('poids')) || undefined);
-  const [result, setResult] = useState<PlateResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    const weight = Number(params.get('poids'));
+    if (!weight) return;
+    plateSettings.set({ targetG: weight, calculated: true });
+    setParams({}, { replace: true });
+  }, [params, setParams]);
 
   // Any change hides the previous answer until the next « Calculer ».
-  const changed = () => {
-    setResult(null);
-    setError(null);
-  };
-  const setPlate = (id: string, patch: Partial<Plate>) => {
-    plateSettings.set({ plates: plates.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
-    changed();
-  };
-  const addPlate = () => {
-    plateSettings.set({ plates: [...plates, { id: crypto.randomUUID(), weightG: 0, count: 2 }] });
-    changed();
-  };
-  const removePlate = (id: string) => {
-    plateSettings.set({ plates: plates.filter((p) => p.id !== id) });
-    changed();
-  };
-
-  const calculate = (target = targetG) => {
-    setError(null);
-    setResult(null);
-    if (target === undefined) return;
-    if (target < barG) setError('Le poids voulu est plus léger que la barre.');
-    else if (target > barG && !plates.some((p) => p.weightG > 0 && p.count >= 2))
-      setError('Ajoute d’abord tes disques, au moins deux de chaque poids (un de chaque côté).');
-    else setResult(loadPlates(barG, target, plates));
-  };
-
-  useEffect(() => {
-    if (params.has('poids')) calculate();
-  }, []);
+  const change = (patch: Partial<ReturnType<typeof plateSettings.get>>) => plateSettings.set({ ...patch, calculated: false });
+  const setPlate = (id: string, patch: Partial<Plate>) => change({ plates: plates.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
+  const addPlate = () => change({ plates: [...plates, { id: crypto.randomUUID(), weightG: 0, count: 2 }] });
+  const removePlate = (id: string) => change({ plates: plates.filter((p) => p.id !== id) });
+  const shown = calculated && targetG !== undefined ? answer(barG, targetG, plates) : null;
 
   return (
     <div className="page" style={{ maxWidth: 720 }}>
@@ -112,10 +98,7 @@ export function Plates() {
               step={500}
               format={formatKg}
               parse={parseKg}
-              onChange={(v) => {
-                plateSettings.set({ barG: v });
-                changed();
-              }}
+              onChange={(v) => change({ barG: v })}
             />
           </div>
           <div className="stack" style={{ gap: 6 }}>
@@ -127,10 +110,7 @@ export function Plates() {
               step={500}
               format={formatKg}
               parse={parseKg}
-              onChange={(v) => {
-                setTargetG(v);
-                changed();
-              }}
+              onChange={(v) => change({ targetG: v })}
             />
           </div>
         </div>
@@ -174,20 +154,13 @@ export function Plates() {
         </button>
       </section>
 
-      <button type="button" className="btn btn-primary" disabled={targetG === undefined} onClick={() => calculate()}>
+      <button type="button" className="btn btn-primary" disabled={targetG === undefined} onClick={() => plateSettings.set({ calculated: true })}>
         Calculer
       </button>
 
-      {error && <div className="card notice-warn">{error}</div>}
-      {result && targetG !== undefined && (
-        <Result
-          result={result}
-          targetG={targetG}
-          onUse={(g) => {
-            setTargetG(g);
-            calculate(g);
-          }}
-        />
+      {shown && 'error' in shown && <div className="card notice-warn">{shown.error}</div>}
+      {shown && 'result' in shown && (
+        <Result result={shown.result} targetG={targetG!} onUse={(g) => plateSettings.set({ targetG: g, calculated: true })} />
       )}
     </div>
   );

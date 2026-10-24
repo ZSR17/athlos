@@ -18,7 +18,11 @@ export const MAX_REPS = 30;
 
 export const PERCENTAGES = [100, 95, 90, 85, 80, 75, 70, 65, 60, 50];
 
-export const oneRmSettings = createStore<{ formula: Formula }>({ formula: 'brzycki' }, 'halko.oneRm');
+// The set entered (or the exercise it comes from) is kept too: it is still there when the page is reopened.
+export const oneRmSettings = createStore<{ formula: Formula; exerciseId: string; weightG?: number; reps?: number; reserve: number }>(
+  { formula: 'brzycki', exerciseId: '', reserve: 0 },
+  'halko.oneRm',
+);
 
 // A single rep is the max itself, whatever the formula.
 export function oneRepMax(weightG: number, reps: number, formula: Formula): number {

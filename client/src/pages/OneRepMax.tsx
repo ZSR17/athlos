@@ -1,5 +1,4 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon.tsx';
 import { Stepper } from '../components/Stepper.tsx';
@@ -19,13 +18,10 @@ const kg = (g: number) => `${formatKg(g)} kg`;
 const day = (ts: number) => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export function OneRepMax() {
-  const stored = oneRmSettings.use().formula;
-  const formula: Formula = stored in FORMULAS ? stored : 'brzycki';
+  const settings = oneRmSettings.use();
+  const { exerciseId, reserve } = settings;
+  const formula: Formula = settings.formula in FORMULAS ? settings.formula : 'brzycki';
   const lifted = useLiveQuery(() => liftedSets(), []);
-  const [exerciseId, setExerciseId] = useState('');
-  const [typed, setTyped] = useState<{ weightG?: number; reps?: number }>({});
-  // Reps in reserve: the formulas assume a set taken to failure, so those are counted as done.
-  const [reserve, setReserve] = useState(0);
 
   // Picking an exercise fills in its best set for the chosen formula, until the values are edited by hand.
   const best = (lifted?.find((l) => l.exercise.id === exerciseId)?.sets ?? [])
@@ -34,11 +30,8 @@ export function OneRepMax() {
       (top, s) => (!top || oneRepMax(s.weightG!, s.reps!, formula) > oneRepMax(top.weightG!, top.reps!, formula) ? s : top),
       undefined,
     );
-  const { weightG, reps } = best ?? typed;
-  const edit = (patch: { weightG?: number; reps?: number }) => {
-    setTyped({ weightG, reps, ...patch });
-    setExerciseId('');
-  };
+  const { weightG, reps } = best ?? settings;
+  const edit = (patch: { weightG?: number; reps?: number }) => oneRmSettings.set({ weightG, reps, ...patch, exerciseId: '' });
   const toFailure = reps && Math.min(MAX_REPS, reps + reserve);
   const max = weightG && toFailure ? oneRepMax(weightG, toFailure, formula) : undefined;
 
@@ -51,7 +44,7 @@ export function OneRepMax() {
         {!!lifted?.length && (
           <label className="stack" style={{ gap: 6 }}>
             <span className="label">Depuis ton historique</span>
-            <select className="input" value={exerciseId} onChange={(e) => setExerciseId(e.target.value)}>
+            <select className="input" value={exerciseId} onChange={(e) => oneRmSettings.set({ exerciseId: e.target.value })}>
               <option value="">Choisir un exercice…</option>
               {lifted.map((l) => (
                 <option key={l.exercise.id} value={l.exercise.id}>
@@ -100,7 +93,7 @@ export function OneRepMax() {
                 return n === null ? null : Math.min(10, n);
               }}
               inputMode="numeric"
-              onChange={setReserve}
+              onChange={(v) => oneRmSettings.set({ reserve: v })}
             />
           </div>
         </div>
