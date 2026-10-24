@@ -7,11 +7,8 @@ export interface Plate {
   count: number;
 }
 
-// The last weight asked for, and whether its answer is shown, are kept too: they are still there when the page is reopened.
-export const plateSettings = createStore<{ barG: number; plates: Plate[]; targetG?: number; calculated: boolean }>(
-  { barG: 20000, plates: [], calculated: false },
-  'halko.plates',
-);
+// The last weight asked for is kept too: it is still there when the page is reopened.
+export const plateSettings = createStore<{ barG: number; plates: Plate[]; targetG?: number }>({ barG: 20000, plates: [] }, 'halko.plates');
 
 export interface Load {
   totalG: number;

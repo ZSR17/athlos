@@ -64,23 +64,21 @@ function answer(barG: number, targetG: number, plates: Plate[]): { error: string
 }
 
 export function Plates() {
-  const { barG, plates, targetG, calculated } = plateSettings.use();
+  const { barG, plates, targetG } = plateSettings.use();
   const [params, setParams] = useSearchParams();
 
-  // Opened from the 1RM calculator with a weight (in grams): calculated straight away.
+  // Opened from the 1RM calculator with a weight (in grams).
   useEffect(() => {
     const weight = Number(params.get('poids'));
     if (!weight) return;
-    plateSettings.set({ targetG: weight, calculated: true });
+    plateSettings.set({ targetG: weight });
     setParams({}, { replace: true });
   }, [params, setParams]);
 
-  // Any change hides the previous answer until the next « Calculer ».
-  const change = (patch: Partial<ReturnType<typeof plateSettings.get>>) => plateSettings.set({ ...patch, calculated: false });
-  const setPlate = (id: string, patch: Partial<Plate>) => change({ plates: plates.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
-  const addPlate = () => change({ plates: [...plates, { id: crypto.randomUUID(), weightG: 0, count: 2 }] });
-  const removePlate = (id: string) => change({ plates: plates.filter((p) => p.id !== id) });
-  const shown = calculated && targetG !== undefined ? answer(barG, targetG, plates) : null;
+  const setPlate = (id: string, patch: Partial<Plate>) => plateSettings.set({ plates: plates.map((p) => (p.id === id ? { ...p, ...patch } : p)) });
+  const addPlate = () => plateSettings.set({ plates: [...plates, { id: crypto.randomUUID(), weightG: 0, count: 2 }] });
+  const removePlate = (id: string) => plateSettings.set({ plates: plates.filter((p) => p.id !== id) });
+  const shown = targetG !== undefined ? answer(barG, targetG, plates) : null;
 
   return (
     <div className="page" style={{ maxWidth: 720 }}>
@@ -98,7 +96,7 @@ export function Plates() {
               step={500}
               format={formatKg}
               parse={parseKg}
-              onChange={(v) => change({ barG: v })}
+              onChange={(v) => plateSettings.set({ barG: v })}
             />
           </div>
           <div className="stack" style={{ gap: 6 }}>
@@ -110,11 +108,16 @@ export function Plates() {
               step={500}
               format={formatKg}
               parse={parseKg}
-              onChange={(v) => change({ targetG: v })}
+              onChange={(v) => plateSettings.set({ targetG: v })}
             />
           </div>
         </div>
       </section>
+
+      {shown && 'error' in shown && <div className="card notice-warn">{shown.error}</div>}
+      {shown && 'result' in shown && (
+        <Result result={shown.result} targetG={targetG!} onUse={(g) => plateSettings.set({ targetG: g })} />
+      )}
 
       <section className="stack">
         <h2 className="section-title">Mes disques</h2>
@@ -153,15 +156,6 @@ export function Plates() {
           Ajouter un disque
         </button>
       </section>
-
-      <button type="button" className="btn btn-primary" disabled={targetG === undefined} onClick={() => plateSettings.set({ calculated: true })}>
-        Calculer
-      </button>
-
-      {shown && 'error' in shown && <div className="card notice-warn">{shown.error}</div>}
-      {shown && 'result' in shown && (
-        <Result result={shown.result} targetG={targetG!} onUse={(g) => plateSettings.set({ targetG: g, calculated: true })} />
-      )}
     </div>
   );
 }
