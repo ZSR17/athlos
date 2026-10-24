@@ -153,6 +153,8 @@ export function ExerciseEditor() {
   const groups = mediaGroups(f);
   const hasVideo = f.mediaUrls.some((u) => u.endsWith('.mp4'));
   const photos = groups.length;
+  // A video, or two photos, fill the exercise: one is removed before another is added.
+  const full = hasVideo || photos >= 2;
   const onMediaMoved = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
     const ids = groups.map((g) => g.ids[0]);
@@ -391,7 +393,7 @@ export function ExerciseEditor() {
               ))}
             </SortableContext>
           </DndContext>
-          {(hasVideo || photos < 2) && (
+          {!full && (
             // The whole tile adds a picture; after a removal, its corner (where the remove button of a
             // picture is) puts the removed one back.
             <div className="media-tile add-tile">
@@ -400,7 +402,7 @@ export function ExerciseEditor() {
                 className="add"
                 disabled={!!busy}
                 onClick={() => fileInput.current?.click()}
-                aria-label={hasVideo ? 'Remplacer la vidéo' : 'Ajouter une photo, un GIF ou une vidéo'}
+                aria-label="Ajouter une photo, un GIF ou une vidéo"
               >
                 <Icon name="plus" size={24} />
               </button>
@@ -417,26 +419,32 @@ export function ExerciseEditor() {
             </div>
           )}
         </div>
-        <div className="row" style={{ gap: 8 }}>
-          <input
-            className="input grow"
-            type="url"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            onKeyDown={(e) => {
-              // Enter imports from the link instead of saving the whole exercise.
-              if (e.key !== 'Enter') return;
-              e.preventDefault();
-              void onLink();
-            }}
-            placeholder="Ou colle le lien d’une image, d’un GIF ou d’une vidéo"
-            aria-label="Lien d’une image, d’un GIF ou d’une vidéo sur Internet"
-            disabled={!!busy}
-          />
-          <button type="button" className="btn" disabled={!!busy || !link.trim()} onClick={() => void onLink()}>
-            Importer
-          </button>
-        </div>
+        {full ? (
+          <span className="small muted">
+            {hasVideo ? 'Retire la vidéo pour en mettre une autre, ou des photos.' : 'Retire une photo pour en mettre une autre.'}
+          </span>
+        ) : (
+          <div className="row" style={{ gap: 8 }}>
+            <input
+              className="input grow"
+              type="url"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter imports from the link instead of saving the whole exercise.
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                void onLink();
+              }}
+              placeholder="Ou colle le lien d’une image, d’un GIF ou d’une vidéo"
+              aria-label="Lien d’une image, d’un GIF ou d’une vidéo sur Internet"
+              disabled={!!busy}
+            />
+            <button type="button" className="btn" disabled={!!busy || !link.trim()} onClick={() => void onLink()}>
+              Importer
+            </button>
+          </div>
+        )}
         <input
           ref={fileInput}
           type="file"
