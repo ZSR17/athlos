@@ -15,10 +15,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { ask } from '../components/Dialog.tsx';
 import { ExerciseList } from '../components/ExerciseList.tsx';
-import { BackLink, useLeave } from '../components/BackLink.tsx';
+import { BackLink } from '../components/BackLink.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { Sheet } from '../components/Sheet.tsx';
-import { WorkoutItemCard } from '../components/WorkoutItemCard.tsx';
+import { WorkoutItemCard, WorkoutItemView } from '../components/WorkoutItemCard.tsx';
 import { db } from '../db/db.ts';
 import {
   addItem,
@@ -32,10 +32,10 @@ import {
 } from '../db/workouts.ts';
 import { useStartSession } from '../lib/useStartSession.ts';
 
-export function WorkoutEditor() {
+// A workout is shown read-only; `editing` (its /modifier page) changes it, each change saved at once.
+export function WorkoutEditor({ editing = false }: { editing?: boolean }) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const leave = useLeave();
   const start = useStartSession();
   // null once looked up and not found (undefined while loading).
   const workout = useLiveQuery(async () => (await db.workouts.get(id)) ?? null, [id]);
@@ -100,16 +100,77 @@ export function WorkoutEditor() {
   };
 
   const sets = ordered.reduce((n, i) => n + i.targets.length, 0);
+  const summary = (
+    <span className="small muted" style={{ fontWeight: 600 }}>
+      {ordered.length} exercice{ordered.length > 1 ? 's' : ''} · {sets} série{sets > 1 ? 's' : ''}
+      {labels.size > 0 && ` · ${labels.size} superset${labels.size > 1 ? 's' : ''}`}
+    </span>
+  );
+  const startButton = ordered.length > 0 && (
+    <button type="button" className="btn btn-primary" onClick={() => start(id)}>
+      <Icon name="play" size={18} />
+      Démarrer la séance
+    </button>
+  );
+  const musclesCard = ordered.length > 0 && (
+    <aside className="col-side card stack" style={{ alignItems: 'center' }}>
+      <h2 className="label" style={{ alignSelf: 'flex-start' }}>
+        Muscles travaillés par la séance
+      </h2>
+      <BodyMap primary={muscles.primary} secondary={muscles.secondary} height={200} />
+    </aside>
+  );
+
+  if (!editing) {
+    return (
+      <div className="page">
+        <header className="row between">
+          <BackLink to="/" />
+          <Link to={`/seances/${id}/modifier`} className="btn btn-ghost">
+            <Icon name="pencil" size={18} />
+            Modifier
+          </Link>
+        </header>
+        <h1 className="title">{workout.name}</h1>
+        {summary}
+        {startButton}
+        <div className="two-col">
+          <div className="col-main stack">
+            {ordered.length === 0 && (
+              <div className="card stack" style={{ alignItems: 'flex-start' }}>
+                <p className="muted" style={{ margin: 0 }}>
+                  Aucun exercice pour l’instant.
+                </p>
+                <Link to={`/seances/${id}/modifier`} className="btn">
+                  <Icon name="plus" size={18} />
+                  Ajouter des exercices
+                </Link>
+              </div>
+            )}
+            {ordered.map((item) => (
+              <WorkoutItemView
+                key={item.id}
+                item={item}
+                exercise={exercises?.get(item.exerciseId)}
+                supersetLabel={item.supersetGroup ? labels.get(item.supersetGroup) : undefined}
+              />
+            ))}
+          </div>
+          {musclesCard}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page">
       <header className="row between">
-        <BackLink to="/" />
+        <BackLink to={`/seances/${id}`} label="Terminé" icon="check" />
         <div className="row" style={{ gap: 4 }}>
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={async () => navigate(`/seances/${await duplicateWorkout(id)}`)}
+            onClick={async () => navigate(`/seances/${await duplicateWorkout(id)}/modifier`)}
           >
             <Icon name="copy" size={18} />
             Dupliquer
@@ -126,7 +187,8 @@ export function WorkoutEditor() {
               });
               if (sure) {
                 await deleteWorkout(id);
-                leave('/');
+                // Not back to this workout's page, which shows nothing anymore.
+                navigate('/', { replace: true });
               }
             }}
           >
@@ -147,16 +209,8 @@ export function WorkoutEditor() {
           onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
       </label>
-      <span className="small muted" style={{ fontWeight: 600 }}>
-        {ordered.length} exercice{ordered.length > 1 ? 's' : ''} · {sets} série{sets > 1 ? 's' : ''}
-        {labels.size > 0 && ` · ${labels.size} superset${labels.size > 1 ? 's' : ''}`}
-      </span>
-      {ordered.length > 0 && (
-        <button type="button" className="btn btn-primary" onClick={() => start(id)}>
-          <Icon name="play" size={18} />
-          Démarrer la séance
-        </button>
-      )}
+      {summary}
+      {startButton}
 
       <div className="two-col">
         <div className="col-main stack">
@@ -194,14 +248,7 @@ export function WorkoutEditor() {
           </button>
         </div>
 
-        {ordered.length > 0 && (
-          <aside className="col-side card stack" style={{ alignItems: 'center' }}>
-            <h2 className="label" style={{ alignSelf: 'flex-start' }}>
-              Muscles travaillés par la séance
-            </h2>
-            <BodyMap primary={muscles.primary} secondary={muscles.secondary} height={200} />
-          </aside>
-        )}
+        {musclesCard}
       </div>
 
       {adding && (

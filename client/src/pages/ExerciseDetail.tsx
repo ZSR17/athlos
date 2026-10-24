@@ -30,7 +30,7 @@ export function ExerciseDetail() {
 
   const addTo = async (workoutId: string) => {
     await addItem(workoutId, exercise);
-    navigate(`/seances/${workoutId}`);
+    navigate(`/seances/${workoutId}/modifier`);
   };
 
   return (

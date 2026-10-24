@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { LocalExercise, LocalWorkoutItem } from '../db/db.ts';
 import { removeItem, setItemMode, updateItem } from '../db/workouts.ts';
-import { formatDuration, formatKg, formatKm, parseCount, parseDuration, parseKg, parseKm } from '../lib/format.ts';
+import { formatDuration, formatKg, formatKm, formatSetValues, parseCount, parseDuration, parseKg, parseKm } from '../lib/format.ts';
 import { addSet, metricLabel, metricsFor, removeSet, setSimpleCount, updateAll, updateOne } from '../lib/targets.ts';
 import { thumbUrl } from './ExerciseMedia.tsx';
 import { Icon } from './Icon.tsx';
@@ -198,6 +198,46 @@ export function WorkoutItemCard({ item, exercise, supersetLabel }: Props) {
           onBlur={() => note !== (item.note ?? '') && updateItem(item.id, { note: note.trim() || null })}
         />
       </label>
+    </article>
+  );
+}
+
+// Read-only version of the card: the exercise and its planned sets, warm-ups apart.
+export function WorkoutItemView({ item, exercise, supersetLabel }: Props) {
+  const type = exercise?.exerciseType ?? 'weight_reps';
+  return (
+    <article className={`item-card${supersetLabel ? ' in-superset' : ''}`}>
+      {supersetLabel && (
+        <span className="superset-tag">
+          <Icon name="link" size={14} />
+          Superset {supersetLabel}
+        </span>
+      )}
+      <Link to={`/exercices/${item.exerciseId}`} className="row" style={{ gap: 10, color: 'var(--text)', textDecoration: 'none' }}>
+        <img className="thumb thumb-sm" src={thumbUrl(exercise?.mediaUrls ?? [])} alt="" />
+        <span className="grow stack" style={{ gap: 2, minWidth: 0 }}>
+          <span className="ellipsis" style={{ fontWeight: 700 }}>
+            {exercise?.name ?? 'Exercice'}
+          </span>
+          <span className="small muted">
+            {item.targets.length} série{item.targets.length > 1 ? 's' : ''}
+          </span>
+        </span>
+        <Icon name="chevron" size={18} />
+      </Link>
+      <div className="chips-wrap" style={{ gap: 6 }}>
+        {item.targets.map((t, k) => (
+          <span key={k} className={`tag${t.kind === 'warmup' ? ' tag-warmup' : ''}`}>
+            {t.kind === 'warmup' && 'Échauff. '}
+            {formatSetValues(type, t) || '—'}
+          </span>
+        ))}
+      </div>
+      {item.note && (
+        <p className="small muted" style={{ margin: 0, lineHeight: 1.45 }}>
+          {item.note}
+        </p>
+      )}
     </article>
   );
 }

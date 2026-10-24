@@ -132,7 +132,7 @@ export function Home() {
   };
   const today = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  const create = async () => navigate(`/seances/${await createWorkout('Nouvelle séance')}`);
+  const create = async () => navigate(`/seances/${await createWorkout('Nouvelle séance')}/modifier`);
 
   return (
     <div className="page">

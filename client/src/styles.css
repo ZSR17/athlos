@@ -1359,3 +1359,6 @@ select.input {
 .record-stat .value {
   font-size: 22px;
 }
+.tag-warmup {
+  color: var(--warn);
+}

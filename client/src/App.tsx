@@ -37,6 +37,7 @@ export function App() {
           <Route path="exercices/:id" element={<ExerciseDetail />} />
           <Route path="exercices/:id/modifier" element={<ExerciseEditor />} />
           <Route path="seances/:id" element={<WorkoutEditor />} />
+          <Route path="seances/:id/modifier" element={<WorkoutEditor editing />} />
           <Route path="seance" element={<LiveSession />} />
           <Route path="historique" element={<History />} />
           <Route path="historique/:id" element={<SessionDetail />} />
