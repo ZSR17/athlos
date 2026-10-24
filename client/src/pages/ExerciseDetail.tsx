@@ -1,7 +1,8 @@
 import { EQUIPMENT_LABELS, EXERCISE_TYPES, MUSCLES } from '@halko/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { BackLink } from '../components/BackLink.tsx';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { ExerciseMedia } from '../components/ExerciseMedia.tsx';
 import { ExerciseProgress } from '../components/ExerciseProgress.tsx';
@@ -17,8 +18,8 @@ const LEVELS: Record<string, string> = { beginner: 'Débutant', intermediate: 'I
 export function ExerciseDetail() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
-  const exercise = useLiveQuery(() => db.exercises.get(id), [id]);
+  // null once looked up and not found (undefined while loading).
+  const exercise = useLiveQuery(async () => (await db.exercises.get(id)) ?? null, [id]);
   const workouts = useLiveQuery(() => db.workouts.orderBy('position').filter((w) => !w.deleted).toArray(), []);
   const history = useLiveQuery(() => exerciseHistory(id), [id]);
   const [bigMap, setBigMap] = useState(false);
@@ -35,22 +36,12 @@ export function ExerciseDetail() {
   return (
     <div className="page page-hero" style={{ maxWidth: 820 }}>
       <ExerciseMedia urls={exercise.mediaUrls} name={exercise.name} className="hero-media">
-        <Link
-          to="/exercices"
-          // Back where the exercise was opened from (a workout, the history…); the library otherwise.
-          onClick={(e) => {
-            if (location.key === 'default') return;
-            e.preventDefault();
-            navigate(-1);
-          }}
-          className="icon-btn"
-          aria-label="Retour"
-          style={{ position: 'absolute', top: 14, left: 16, background: 'rgb(14 16 18 / .7)', color: '#fff' }}
-        >
-          <Icon name="back" />
-        </Link>
+        {/* Back where the exercise was opened from (a workout, the history…); the library otherwise. */}
+        <BackLink to="/exercices" style={{ position: 'absolute', top: 14, left: 16, background: 'rgb(14 16 18 / .7)', color: '#fff' }} />
         <Link
           to={`/exercices/${exercise.id}/modifier`}
+          // The editor then returns here by going back, instead of opening this page again.
+          state={{ fromDetail: true }}
           className="icon-btn"
           aria-label="Modifier l’exercice"
           style={{ position: 'absolute', top: 14, right: 16, background: 'rgb(14 16 18 / .7)', color: '#fff' }}

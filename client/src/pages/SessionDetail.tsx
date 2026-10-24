@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { BackLink, useLeave } from '../components/BackLink.tsx';
 import { ask } from '../components/Dialog.tsx';
 import { thumbUrl } from '../components/ExerciseMedia.tsx';
 import { Icon } from '../components/Icon.tsx';
@@ -24,7 +25,7 @@ export function SessionDetail() {
   const { id = '' } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const location = useLocation();
+  const leave = useLeave();
   const data = useLiveQuery(async () => {
     const session = await db.sessions.get(id);
     if (!session || session.deleted) return null;
@@ -63,20 +64,9 @@ export function SessionDetail() {
   return (
     <div className="page" style={{ maxWidth: 820 }}>
       <header className="row">
-        <Link
-          to="/historique"
-          // Back where the session was opened from (an exercise, the progress…); the history after
-          // finishing a session or when opened directly.
-          onClick={(e) => {
-            if (location.key === 'default' || params.get('fin')) return;
-            e.preventDefault();
-            navigate(-1);
-          }}
-          className="icon-btn"
-          aria-label="Retour"
-        >
-          <Icon name="back" />
-        </Link>
+        {/* Back where the session was opened from (an exercise, the progress…); the history after
+            finishing a session, or when opened directly. */}
+        <BackLink to="/historique" history={!params.get('fin')} />
         <div className="grow" />
         <button
           type="button"
@@ -90,7 +80,8 @@ export function SessionDetail() {
             });
             if (sure) {
               await deleteSession(id);
-              navigate('/historique');
+              if (params.get('fin')) navigate('/historique', { replace: true });
+              else leave('/historique');
             }
           }}
         >

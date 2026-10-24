@@ -4,7 +4,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { type Crop, EQUIPMENT_LABELS, EXERCISE_TYPE_IDS, EXERCISE_TYPES, type ExerciseType, MUSCLE_IDS, MUSCLES, type MuscleId, type UploadResponse } from '@halko/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { BackLink } from '../components/BackLink.tsx';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { ask } from '../components/Dialog.tsx';
 import { CropSheet } from '../components/CropSheet.tsx';
@@ -93,6 +94,9 @@ function MediaTile({ group, label, onRemove }: { group: MediaGroup; label: strin
 export function ExerciseEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
+  // Opened from the exercise's page: leaving goes back to it, rather than opening it again.
+  const fromDetail = !!(useLocation().state as { fromDetail?: boolean } | null)?.fromDetail;
+  const showExercise = (target: string) => (fromDetail ? navigate(-1) : navigate(`/exercices/${target}`, { replace: true }));
   const existing = useLiveQuery(() => (id ? db.exercises.get(id) : undefined), [id]);
   const [f, setF] = useState<ExerciseFields | null>(id ? null : EMPTY);
   const [steps, setSteps] = useState('');
@@ -251,7 +255,7 @@ export function ExerciseEditor() {
     if (!f.name.trim()) return setError('Donne un nom à l’exercice.');
     const fields = { ...f, instructions: steps.split('\n').map((s) => s.trim()).filter(Boolean) };
     const target = id ? (await updateExercise(id, fields), id) : await createExercise(fields);
-    navigate(`/exercices/${target}`, { replace: true });
+    showExercise(target);
   };
 
   const builtin = existing?.source === 'builtin';
@@ -259,9 +263,7 @@ export function ExerciseEditor() {
   return (
     <form className="page" style={{ maxWidth: 720 }} onSubmit={save}>
       <header className="row between">
-        <Link to={id ? `/exercices/${id}` : '/exercices'} className="icon-btn" aria-label="Annuler">
-          <Icon name="back" />
-        </Link>
+        <BackLink to={id ? `/exercices/${id}` : '/exercices'} label="Annuler" />
         <div className="row" style={{ gap: 4 }}>
           {builtin && existing?.customized && (
             <button
@@ -279,7 +281,7 @@ export function ExerciseEditor() {
                 setBusy('Retour à l’original…');
                 try {
                   await resetExercise(id!);
-                  navigate(`/exercices/${id}`, { replace: true });
+                  showExercise(id!);
                 } catch {
                   setError('Serveur injoignable : réessaie une fois connecté.');
                   setBusy(null);

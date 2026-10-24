@@ -6,6 +6,7 @@ import { BodyMap } from '../components/BodyMap.tsx';
 import { Chrono } from '../components/Chrono.tsx';
 import { ask } from '../components/Dialog.tsx';
 import { ExerciseMedia } from '../components/ExerciseMedia.tsx';
+import { BackLink, useLeave } from '../components/BackLink.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { Ring } from '../components/Ring.tsx';
 import { Sheet } from '../components/Sheet.tsx';
@@ -38,6 +39,7 @@ function elapsedLabel(ms: number): string {
 
 export function LiveSession() {
   const navigate = useNavigate();
+  const leave = useLeave();
   const live = useLiveQuery(async () => ((await db.meta.get('live'))?.value as LiveState | undefined) ?? null, []);
   const session = useLiveQuery(() => (live ? db.sessions.get(live.sessionId) : undefined), [live?.sessionId]);
   const logs = useLiveQuery(() => (live ? sessionLogs(live.sessionId) : []), [live?.sessionId]);
@@ -117,7 +119,8 @@ export function LiveSession() {
   const finish = async () => {
     const id = await finishSession();
     requestSync(0);
-    navigate(id ? `/historique/${id}?fin=1` : '/');
+    // Replaces this screen: going back from the summary must not return to a finished session.
+    navigate(id ? `/historique/${id}?fin=1` : '/', { replace: true });
   };
 
   // `now` ticks every 250 ms and can lag the moment the rest started: never show more than planned.
@@ -127,9 +130,7 @@ export function LiveSession() {
   return (
     <div className={`page live${resting ? ' resting' : ''}`} style={{ maxWidth: 720 }}>
       <header className="row" style={{ gap: 10 }}>
-        <Link to="/" className="icon-btn" aria-label="Quitter l'écran (la séance continue)">
-          <Icon name="back" />
-        </Link>
+        <BackLink to="/" label="Quitter l'écran (la séance continue)" />
         <div className="grow stack" style={{ gap: 0, minWidth: 0 }}>
           <span className="ellipsis" style={{ fontWeight: 700 }}>
             {session?.name ?? 'Séance'}
@@ -334,7 +335,7 @@ export function LiveSession() {
               });
               if (!sure) return setFinishing(true);
               await discardSession();
-              navigate('/');
+              leave('/');
             }}
           >
             Abandonner la séance

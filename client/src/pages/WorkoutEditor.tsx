@@ -15,6 +15,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { ask } from '../components/Dialog.tsx';
 import { ExerciseList } from '../components/ExerciseList.tsx';
+import { BackLink, useLeave } from '../components/BackLink.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { Sheet } from '../components/Sheet.tsx';
 import { WorkoutItemCard } from '../components/WorkoutItemCard.tsx';
@@ -34,8 +35,10 @@ import { useStartSession } from '../lib/useStartSession.ts';
 export function WorkoutEditor() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const leave = useLeave();
   const start = useStartSession();
-  const workout = useLiveQuery(() => db.workouts.get(id), [id]);
+  // null once looked up and not found (undefined while loading).
+  const workout = useLiveQuery(async () => (await db.workouts.get(id)) ?? null, [id]);
   const items = useLiveQuery(() => liveItems(db, id), [id]);
   const exercises = useLiveQuery(
     async () => {
@@ -101,9 +104,7 @@ export function WorkoutEditor() {
   return (
     <div className="page">
       <header className="row between">
-        <Link to="/" className="icon-btn" aria-label="Retour aux séances">
-          <Icon name="back" />
-        </Link>
+        <BackLink to="/" />
         <div className="row" style={{ gap: 4 }}>
           <button
             type="button"
@@ -125,7 +126,7 @@ export function WorkoutEditor() {
               });
               if (sure) {
                 await deleteWorkout(id);
-                navigate('/');
+                leave('/');
               }
             }}
           >
