@@ -17,7 +17,7 @@ type Period = keyof typeof PERIODS;
 const chartSettings = createStore<{ period: Period }>({ period: '3m' }, 'halko.chart');
 
 // Sessions listed under the chart before « Voir les … autres ».
-const LISTED = 10;
+const LISTED = 5;
 
 const shortFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 const fullFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
