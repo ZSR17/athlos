@@ -10,6 +10,7 @@ import { Home } from './pages/Home.tsx';
 import { Library } from './pages/Library.tsx';
 import { LiveSession } from './pages/LiveSession.tsx';
 import { Login } from './pages/Login.tsx';
+import { Plates } from './pages/Plates.tsx';
 import { SessionDetail } from './pages/SessionDetail.tsx';
 import { Settings } from './pages/Settings.tsx';
 import { WorkoutEditor } from './pages/WorkoutEditor.tsx';
@@ -38,6 +39,7 @@ export function App() {
           <Route path="seance" element={<LiveSession />} />
           <Route path="historique" element={<History />} />
           <Route path="historique/:id" element={<SessionDetail />} />
+          <Route path="disques" element={<Plates />} />
           <Route path="reglages" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

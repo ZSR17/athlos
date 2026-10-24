@@ -1258,3 +1258,37 @@ select.input {
   accent-color: var(--accent);
   cursor: pointer;
 }
+
+/* ---------- Plate calculator ---------- */
+.plate-row {
+  gap: 8px;
+  padding: 8px;
+}
+.plate-row .stepper {
+  background: var(--surface2);
+}
+.plate-weight {
+  flex: 0 0 84px;
+  align-self: stretch;
+  justify-content: center;
+}
+.plate-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plate-count {
+  display: inline-block;
+  min-width: 36px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--accent-text);
+}
+.notice-warn {
+  color: var(--warn);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+  line-height: 1.45;
+}

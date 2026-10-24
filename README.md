@@ -38,6 +38,8 @@ Pas de compte, pas de publicité, pas de service tiers : tes données restent ch
 **En salle**
 - Séance guidée : valeurs pré-remplies avec ta dernière performance, minuteur de repos (± 15 s), chrono.
 - Un bip au volume réglable signale la fin du repos.
+- Calculateur de disques : les disques à mettre de chaque côté de la barre pour atteindre un poids, selon ceux
+  que tu as, ou les poids les plus proches quand il n'est pas atteignable.
 
 **Progression**
 - Historique des séances, records personnels, 1RM estimé, volume.

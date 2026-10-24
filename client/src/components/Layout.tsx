@@ -7,6 +7,7 @@ const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'Séances', icon: 'home', end: true },
   { to: '/exercices', label: 'Exercices', icon: 'dumbbell' },
   { to: '/historique', label: 'Historique', icon: 'chart' },
+  { to: '/disques', label: 'Disques', icon: 'plate' },
   { to: '/reglages', label: 'Réglages', icon: 'settings' },
 ];
 
