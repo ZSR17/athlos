@@ -12,6 +12,7 @@
     "test": "npm test -w server && npm test -w client",
     "typecheck": "tsc -p shared && tsc -p server && tsc -p client",
     "db:generate": "npm run db:generate -w server",
+    "seed:history": "npm run seed:history -w server --",
     "import:exercises": "npm run import:exercises -w server",
     "hash-password": "npm run hash-password -w server --",
     "dev": "concurrently -k -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",

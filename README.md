@@ -120,6 +120,7 @@ navigateur de dev voit alors que la base a changé et repart de zéro au lieu de
 | `npm test` | Tests du serveur et de l'app (Vitest) |
 | `npm run typecheck` | Vérification TypeScript des trois paquets |
 | `npm run build` | Compilation de l'app web dans `client/dist` |
+| `npm run seed:history` | Séances Push, Pull et Jambes avec 12 semaines d'historique dans `server/data`, pour essayer l'historique, les records et les graphiques |
 | `npm run db:generate` | Nouvelle migration après une modification de `server/src/db/schema.ts` |
 | `npx knip` | Détection du code et des dépendances inutilisés |
 

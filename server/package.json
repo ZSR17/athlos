@@ -8,6 +8,7 @@
     "start": "node --import tsx src/main.ts",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
+    "seed:history": "tsx --env-file-if-exists=.env src/scripts/seed-history.ts",
     "import:exercises": "tsx src/scripts/import-exercises.ts",
     "hash-password": "tsx src/scripts/hash-password.ts"
   },
