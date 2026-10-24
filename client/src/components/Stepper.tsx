@@ -7,6 +7,7 @@ export function Stepper({
   value,
   step,
   min = 0,
+  max = Infinity,
   format,
   parse,
   onChange,
@@ -18,6 +19,7 @@ export function Stepper({
   value: number | undefined;
   step: number;
   min?: number;
+  max?: number;
   format: (v: number | undefined) => string;
   parse: (s: string) => number | null;
   onChange: (v: number) => void;
@@ -34,7 +36,7 @@ export function Stepper({
         <ValueInput value={value} format={format} parse={parse} onCommit={onChange} label={label} inputMode={inputMode} disabled={disabled} />
         <span className="small muted">{unit}</span>
       </span>
-      <button type="button" disabled={disabled} onClick={() => onChange(v + step)} aria-label={`${label} : plus`}>
+      <button type="button" disabled={disabled || v >= max} onClick={() => onChange(Math.min(max, v + step))} aria-label={`${label} : plus`}>
         +
       </button>
     </div>

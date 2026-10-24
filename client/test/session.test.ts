@@ -5,6 +5,7 @@ import {
   exerciseHistory,
   finishSession,
   getLive,
+  liftedSets,
   logSet,
   previousPerformance,
   sessionLogs,
@@ -135,6 +136,23 @@ describe('session flow', () => {
 
     const prev = await previousPerformance('squat', 'another', db);
     expect(prev.get(1)).toMatchObject({ reps: 7, weightG: 82500 });
+  });
+
+  it('lists the loaded sets of finished sessions, for load-and-reps exercises only', async () => {
+    const w = await createWorkout('Jambes', db);
+    await addItem(w, squat, db);
+    await addItem(w, plank, db);
+    await startSession(w, db);
+    await logSet((await getLive(db))!, 0, { reps: 5, weightG: 100000 }, db);
+    await logSet((await getLive(db))!, 1, { durationS: 60 }, db);
+    expect(await liftedSets(db)).toEqual([]); // not finished yet
+    await finishSession(db);
+    await startSession(w, db);
+    await logSet((await getLive(db))!, 0, { reps: 3, weightG: 110000 }, db);
+
+    const lifted = await liftedSets(db);
+    expect(lifted.map((l) => l.exercise.id)).toEqual(['squat']);
+    expect(lifted[0]!.sets).toMatchObject([{ reps: 5, weightG: 100000 }]);
   });
 
   it('updates the workout plan with the values done', async () => {

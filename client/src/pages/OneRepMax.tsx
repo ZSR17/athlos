@@ -1,16 +1,42 @@
+import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Icon } from '../components/Icon.tsx';
 import { Stepper } from '../components/Stepper.tsx';
+import type { LocalSetLog } from '../db/db.ts';
+import { liftedSets } from '../db/sessions.ts';
 import { formatKg, parseCount, parseKg } from '../lib/format.ts';
-import { FORMULA_LABELS, type Formula, MAX_REPS, PERCENTAGES, oneRepMax, oneRmSettings } from '../lib/oneRm.ts';
+import { FORMULAS, type Formula, MAX_REPS, PERCENTAGES, oneRepMax, oneRmSettings, repsAt } from '../lib/oneRm.ts';
 
 const formatReps = (n: number | undefined) => (n === undefined ? '' : String(n));
+const parseReps = (s: string) => {
+  const n = parseCount(s);
+  return n === null ? null : Math.min(MAX_REPS, Math.max(1, n));
+};
 // To the nearest 100 g: finer than any plate, no need for more.
-const kg = (g: number) => `${formatKg(Math.round(g / 100) * 100)} kg`;
+const round = (g: number) => Math.round(g / 100) * 100;
+const kg = (g: number) => `${formatKg(g)} kg`;
+const day = (ts: number) => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 export function OneRepMax() {
-  const { formula } = oneRmSettings.use();
-  const [weightG, setWeightG] = useState<number>();
-  const [reps, setReps] = useState<number>();
+  const stored = oneRmSettings.use().formula;
+  const formula: Formula = stored in FORMULAS ? stored : 'brzycki';
+  const lifted = useLiveQuery(() => liftedSets(), []);
+  const [exerciseId, setExerciseId] = useState('');
+  const [typed, setTyped] = useState<{ weightG?: number; reps?: number }>({});
+
+  // Picking an exercise fills in its best set for the chosen formula, until the values are edited by hand.
+  const best = (lifted?.find((l) => l.exercise.id === exerciseId)?.sets ?? [])
+    .filter((s) => s.reps! <= MAX_REPS)
+    .reduce<LocalSetLog | undefined>(
+      (top, s) => (!top || oneRepMax(s.weightG!, s.reps!, formula) > oneRepMax(top.weightG!, top.reps!, formula) ? s : top),
+      undefined,
+    );
+  const { weightG, reps } = best ?? typed;
+  const edit = (patch: { weightG?: number; reps?: number }) => {
+    setTyped({ weightG, reps, ...patch });
+    setExerciseId('');
+  };
   const max = weightG && reps ? oneRepMax(weightG, reps, formula) : undefined;
 
   return (
@@ -19,10 +45,28 @@ export function OneRepMax() {
 
       <section className="stack">
         <h2 className="section-title">Ta série</h2>
+        {!!lifted?.length && (
+          <label className="stack" style={{ gap: 6 }}>
+            <span className="label">Depuis ton historique</span>
+            <select className="input" value={exerciseId} onChange={(e) => setExerciseId(e.target.value)}>
+              <option value="">Choisir un exercice…</option>
+              {lifted.map((l) => (
+                <option key={l.exercise.id} value={l.exercise.id}>
+                  {l.exercise.name}
+                </option>
+              ))}
+            </select>
+            {best && (
+              <span className="small muted">
+                Ta meilleure série : {kg(best.weightG!)} × {best.reps}, le {day(best.completedAt)}
+              </span>
+            )}
+          </label>
+        )}
         <div className="steppers">
           <div className="stack" style={{ gap: 6 }}>
             <span className="label">Charge</span>
-            <Stepper label="Charge" unit="kg" value={weightG} step={500} format={formatKg} parse={parseKg} onChange={setWeightG} />
+            <Stepper label="Charge" unit="kg" value={weightG} step={500} format={formatKg} parse={parseKg} onChange={(v) => edit({ weightG: v })} />
           </div>
           <div className="stack" style={{ gap: 6 }}>
             <span className="label">Répétitions</span>
@@ -32,10 +76,11 @@ export function OneRepMax() {
               value={reps}
               step={1}
               min={1}
+              max={MAX_REPS}
               format={formatReps}
-              parse={parseCount}
+              parse={parseReps}
               inputMode="numeric"
-              onChange={(v) => setReps(Math.min(MAX_REPS, Math.max(1, v)))}
+              onChange={(v) => edit({ reps: Math.max(1, v) })}
             />
           </div>
         </div>
@@ -44,9 +89,9 @@ export function OneRepMax() {
       <section className="stack">
         <h2 className="section-title">Formule</h2>
         <div className="chips-wrap">
-          {(Object.keys(FORMULA_LABELS) as Formula[]).map((f) => (
+          {(Object.keys(FORMULAS) as Formula[]).map((f) => (
             <button key={f} type="button" className="chip" aria-pressed={formula === f} onClick={() => oneRmSettings.set({ formula: f })}>
-              {FORMULA_LABELS[f]}
+              {FORMULAS[f].label}
             </button>
           ))}
         </div>
@@ -59,16 +104,23 @@ export function OneRepMax() {
           )}
           <div className="card stack" style={{ gap: 4 }}>
             <span className="label">1RM estimé</span>
-            <span className="title">{kg(max)}</span>
+            <span className="title">{kg(round(max))}</span>
           </div>
           <div className="card percent-table">
-            {PERCENTAGES.map((p) => (
-              <div key={p} className="row between">
-                <span className="muted">{p} %</span>
-                <span className="percent-kg">{kg((max * p) / 100)}</span>
-              </div>
-            ))}
+            {PERCENTAGES.map((p) => {
+              const g = round((max * p) / 100);
+              const r = repsAt(p, formula);
+              return (
+                <Link key={p} to={`/disques?poids=${g}`} className="row" aria-label={`${p} % : ${kg(g)}, voir les disques`}>
+                  <span className="percent">{p} %</span>
+                  <span className="grow small muted">{r === null ? `${MAX_REPS}+ reps` : `≈ ${r} rep${r > 1 ? 's' : ''}`}</span>
+                  <span className="percent-kg">{kg(g)}</span>
+                  <Icon name="chevron" size={16} />
+                </Link>
+              );
+            })}
           </div>
+          <span className="small muted">Touche une ligne pour voir les disques à mettre sur la barre.</span>
         </section>
       )}
     </div>

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Icon } from '../components/Icon.tsx';
 import { Stepper } from '../components/Stepper.tsx';
 import { ValueInput } from '../components/ValueInput.tsx';
@@ -57,7 +58,9 @@ function Result({ result, targetG, onUse }: { result: PlateResult; targetG: numb
 
 export function Plates() {
   const { barG, plates } = plateSettings.use();
-  const [targetG, setTargetG] = useState<number>();
+  // Opened from the 1RM calculator with a weight (in grams): calculated straight away.
+  const [params] = useSearchParams();
+  const [targetG, setTargetG] = useState(() => Number(params.get('poids')) || undefined);
   const [result, setResult] = useState<PlateResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +91,10 @@ export function Plates() {
       setError('Ajoute d’abord tes disques, au moins deux de chaque poids (un de chaque côté).');
     else setResult(loadPlates(barG, target, plates));
   };
+
+  useEffect(() => {
+    if (params.has('poids')) calculate();
+  }, []);
 
   return (
     <div className="page" style={{ maxWidth: 720 }}>

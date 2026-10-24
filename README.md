@@ -40,8 +40,8 @@ Pas de compte, pas de publicité, pas de service tiers : tes données restent ch
 - Un bip au volume réglable signale la fin du repos.
 - Calculateur de disques : les disques à mettre de chaque côté de la barre pour atteindre un poids, selon ceux
   que tu as, ou les poids les plus proches quand il n'est pas atteignable.
-- Calculateur de 1RM d'après une série (Brzycki, Epley, McGlothin, Lombardi, Mayhew, O'Conner, Wathen ou leur
-  moyenne), avec les charges de 95 % à 50 %.
+- Calculateur de 1RM d'après une série, saisie ou reprise de ton historique (Brzycki, Epley, McGlothin, Lombardi,
+  Mayhew, O'Conner, Wathen), avec les charges et les répétitions possibles de 95 % à 50 %.
 
 **Progression**
 - Historique des séances, records personnels, 1RM estimé, volume.

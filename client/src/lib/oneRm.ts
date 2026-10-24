@@ -11,12 +11,7 @@ export const FORMULAS = {
   wathen: { label: 'Wathen', estimate: (w: number, reps: number) => (100 * w) / (48.8 + 53.8 * Math.exp(-0.075 * reps)) },
 } as const;
 
-export type Formula = keyof typeof FORMULAS | 'average';
-
-export const FORMULA_LABELS: Record<Formula, string> = {
-  ...(Object.fromEntries(Object.entries(FORMULAS).map(([k, f]) => [k, f.label])) as Record<keyof typeof FORMULAS, string>),
-  average: 'Moyenne',
-};
+export type Formula = keyof typeof FORMULAS;
 
 // Brzycki divides by (37 - reps): past this, its estimate is meaningless.
 export const MAX_REPS = 30;
@@ -27,9 +22,21 @@ export const oneRmSettings = createStore<{ formula: Formula }>({ formula: 'brzyc
 
 // A single rep is the max itself, whatever the formula.
 export function oneRepMax(weightG: number, reps: number, formula: Formula): number {
-  if (reps <= 1) return weightG;
-  const all = Object.values(FORMULAS);
-  const value =
-    formula === 'average' ? all.reduce((sum, f) => sum + f.estimate(weightG, reps), 0) / all.length : FORMULAS[formula].estimate(weightG, reps);
-  return Math.round(value);
+  return reps <= 1 ? weightG : Math.round(FORMULAS[formula].estimate(weightG, Math.min(reps, MAX_REPS)));
+}
+
+// Reps the formula expects at `percent` of the max, rounded down (those can be done), or null past MAX_REPS.
+export function repsAt(percent: number, formula: Formula): number | null {
+  if (percent >= 100) return 1;
+  const ratio = 100 / percent;
+  const estimate = FORMULAS[formula].estimate;
+  if (estimate(1, MAX_REPS) < ratio) return null;
+  let low = 1;
+  let high = MAX_REPS;
+  while (high - low > 0.001) {
+    const mid = (low + high) / 2;
+    if (estimate(1, mid) < ratio) low = mid;
+    else high = mid;
+  }
+  return Math.max(1, Math.floor(high + 1e-6));
 }

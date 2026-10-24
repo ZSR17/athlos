@@ -1,6 +1,6 @@
 import { type PlanItem, type SetValues, type Step, buildSteps, increase, nextOpenStep, raised, restAfter, setCount, stepKey } from '../lib/session.ts';
 import { type DoneSets, doneSets, rankKey, withDone } from '../lib/targets.ts';
-import { type LocalSession, type LocalSetLog, type HalkoDb, db as defaultDb } from './db.ts';
+import { type LocalExercise, type LocalSession, type LocalSetLog, type HalkoDb, db as defaultDb } from './db.ts';
 import { liveItems } from './workouts.ts';
 
 // State of the session being performed. Device-local (never synced): only the session row and its
@@ -224,6 +224,21 @@ export async function exerciseHistory(exerciseId: string, db: HalkoDb = defaultD
   return [...bySession.entries()]
     .map(([id, sets]) => ({ session: sessions.get(id)!, sets: sets.sort((a, b) => a.setIndex - b.setIndex) }))
     .sort((a, b) => a.session.startedAt - b.session.startedAt);
+}
+
+// Working sets with a load and reps, from finished sessions, for each load-and-reps exercise (by name).
+export async function liftedSets(db: HalkoDb = defaultDb): Promise<{ exercise: LocalExercise; sets: LocalSetLog[] }[]> {
+  const sessions = new Set((await finishedSessions(db)).map((s) => s.id));
+  const logs = (await db.setLogs.toArray()).filter(
+    (l) => !l.deleted && sessions.has(l.sessionId) && l.kind !== 'warmup' && l.weightG && l.reps,
+  );
+  const byExercise = new Map<string, LocalSetLog[]>();
+  for (const l of logs) byExercise.set(l.exerciseId, [...(byExercise.get(l.exerciseId) ?? []), l]);
+  const exercises = await db.exercises.bulkGet([...byExercise.keys()]);
+  return exercises
+    .filter((e): e is LocalExercise => !!e && !e.deleted && e.exerciseType === 'weight_reps')
+    .map((exercise) => ({ exercise, sets: byExercise.get(exercise.id)! }))
+    .sort((a, b) => a.exercise.name.localeCompare(b.exercise.name, 'fr'));
 }
 
 // What was done for each set index the last time this exercise was performed (outside this session).

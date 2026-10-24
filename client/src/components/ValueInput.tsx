@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 // Text input that shows a formatted value and commits a parsed one on blur / Enter.
-// Invalid input is reverted instead of being saved.
+// Invalid input is reverted instead of being saved; `parse` may also cap it.
 export function ValueInput({
   value,
   format,
@@ -26,8 +26,10 @@ export function ValueInput({
 
   const commit = () => {
     const parsed = parse(text);
-    if (parsed === null) setText(format(value));
-    else if (parsed !== value) onCommit(parsed);
+    if (parsed === null) return setText(format(value));
+    // Shows the value as kept (a capped or normalised one), even when it does not change.
+    setText(format(parsed));
+    if (parsed !== value) onCommit(parsed);
   };
 
   return (
