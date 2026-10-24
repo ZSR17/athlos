@@ -1324,3 +1324,28 @@ select.input {
   font-size: 18px;
   font-weight: 700;
 }
+
+/* ---------- History: sessions by month ---------- */
+.month > summary {
+  list-style: none;
+}
+.month > summary::-webkit-details-marker {
+  display: none;
+}
+.month-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 4px;
+  cursor: pointer;
+}
+.month-head svg {
+  transition: transform 0.15s;
+}
+.month[open] > .month-head svg {
+  transform: rotate(90deg);
+}
+.month[open] > .month-head {
+  margin-bottom: 4px;
+}

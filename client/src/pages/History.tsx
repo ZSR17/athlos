@@ -4,12 +4,13 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon.tsx';
 import { ExerciseProgress } from '../components/ExerciseProgress.tsx';
-import { type LocalExercise, db } from '../db/db.ts';
+import { type LocalExercise, type LocalSession, type LocalSetLog, db } from '../db/db.ts';
 import { exerciseHistory, finishedSessions } from '../db/sessions.ts';
 import { formatMinutes, formatTonnage, sessionDurationMs, sessionVolumeG, startOfWeek } from '../lib/stats.ts';
 
 const dayFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' });
 const monthFmt = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
+const monthYearFmt = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
 const fullFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
 function useHistoryData() {
@@ -37,6 +38,15 @@ export function History() {
   if (!data) return <div className="page muted">Chargement…</div>;
 
   const week = data.sessions.filter((s) => s.startedAt >= startOfWeek());
+  const months: { key: string; sessions: LocalSession[]; volume: number }[] = [];
+  for (const s of data.sessions) {
+    const d = new Date(s.startedAt);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (months.at(-1)?.key !== key) months.push({ key, sessions: [], volume: 0 });
+    const month = months.at(-1)!;
+    month.sessions.push(s);
+    month.volume += sessionVolumeG(bySession.get(s.id) ?? [], types);
+  }
   const weekLogs = week.flatMap((s) => bySession.get(s.id) ?? []);
 
   return (
@@ -70,35 +80,55 @@ export function History() {
       {tab === 'sessions' ? (
         <div className="stack" style={{ gap: 8 }}>
           {data.sessions.length === 0 && <p className="muted">Aucune séance terminée pour l'instant.</p>}
-          {data.sessions.map((s) => {
-            const logs = bySession.get(s.id) ?? [];
-            const volume = sessionVolumeG(logs, types);
-            return (
-              <Link key={s.id} to={`/historique/${s.id}`} className="list-item" style={{ padding: '12px 14px' }}>
-                <span className="stack" style={{ width: 44, alignItems: 'center', gap: 0 }} aria-label={fullFmt.format(s.startedAt)}>
-                  <span className="num" style={{ fontSize: 22, lineHeight: 1 }}>
-                    {dayFmt.format(s.startedAt)}
-                  </span>
-                  <span className="small muted">{monthFmt.format(s.startedAt)}</span>
+          {months.map((m, i) => (
+            // Months are folded, except the latest: a long history stays short to scroll.
+            <details key={m.key} className="month" open={i === 0}>
+              <summary className="month-head">
+                <span className="grow" style={{ fontWeight: 700, textTransform: 'capitalize' }}>
+                  {monthYearFmt.format(m.sessions[0]!.startedAt)}
                 </span>
-                <span className="grow stack" style={{ gap: 2 }}>
-                  <span className="ellipsis" style={{ fontWeight: 700 }}>
-                    {s.name}
-                  </span>
-                  <span className="small muted">
-                    {formatMinutes(sessionDurationMs(s))} · {logs.length} série{logs.length > 1 ? 's' : ''}
-                    {volume > 0 && ` · ${formatTonnage(volume)}`}
-                  </span>
+                <span className="small muted">
+                  {m.sessions.length} séance{m.sessions.length > 1 ? 's' : ''}
+                  {m.volume > 0 && ` · ${formatTonnage(m.volume)}`}
                 </span>
                 <Icon name="chevron" size={18} />
-              </Link>
-            );
-          })}
+              </summary>
+              <div className="stack" style={{ gap: 8 }}>
+                {m.sessions.map((s) => (
+                  <SessionRow key={s.id} session={s} logs={bySession.get(s.id) ?? []} types={types} />
+                ))}
+              </div>
+            </details>
+          ))}
         </div>
       ) : (
         <Progress exercises={data.exercises} logs={data.logs} />
       )}
     </div>
+  );
+}
+
+function SessionRow({ session: s, logs, types }: { session: LocalSession; logs: LocalSetLog[]; types: Map<string, ExerciseType> }) {
+  const volume = sessionVolumeG(logs, types);
+  return (
+    <Link to={`/historique/${s.id}`} className="list-item" style={{ padding: '12px 14px' }}>
+      <span className="stack" style={{ width: 44, alignItems: 'center', gap: 0 }} aria-label={fullFmt.format(s.startedAt)}>
+        <span className="num" style={{ fontSize: 22, lineHeight: 1 }}>
+          {dayFmt.format(s.startedAt)}
+        </span>
+        <span className="small muted">{monthFmt.format(s.startedAt)}</span>
+      </span>
+      <span className="grow stack" style={{ gap: 2 }}>
+        <span className="ellipsis" style={{ fontWeight: 700 }}>
+          {s.name}
+        </span>
+        <span className="small muted">
+          {formatMinutes(sessionDurationMs(s))} · {logs.length} série{logs.length > 1 ? 's' : ''}
+          {volume > 0 && ` · ${formatTonnage(volume)}`}
+        </span>
+      </span>
+      <Icon name="chevron" size={18} />
+    </Link>
   );
 }
 
