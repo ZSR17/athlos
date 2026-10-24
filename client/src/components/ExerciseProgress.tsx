@@ -103,9 +103,9 @@ export function ExerciseProgress({ exercise, history }: { exercise: LocalExercis
               ))}
             </tbody>
           </table>
-          {!expanded && shown.length > LISTED && (
-            <button type="button" className="btn btn-ghost" onClick={() => setExpanded(true)}>
-              Voir les {shown.length - LISTED} autres séances
+          {shown.length > LISTED && (
+            <button type="button" className="btn btn-ghost" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
+              {expanded ? 'Réduire' : `Voir les ${shown.length - LISTED} autres séances`}
             </button>
           )}
         </div>
