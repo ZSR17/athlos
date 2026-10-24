@@ -16,6 +16,9 @@ type Period = keyof typeof PERIODS;
 // The chart's period, remembered on the device.
 const chartSettings = createStore<{ period: Period }>({ period: '3m' }, 'halko.chart');
 
+// Sessions listed under the chart before « Voir les … autres ».
+const LISTED = 10;
+
 const fullFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
 // Chart and table of an exercise's finished sessions, for one measure at a time (charge, volume…).
@@ -24,6 +27,7 @@ export function ExerciseProgress({ exercise, history }: { exercise: LocalExercis
   const [metricId, setMetricId] = useState<string | null>(null);
   const metric = metrics.find((m) => m.id === metricId) ?? metrics[0];
   const { period } = chartSettings.use();
+  const [expanded, setExpanded] = useState(false);
   if (!metric) return null;
 
   const rows = history
@@ -32,6 +36,9 @@ export function ExerciseProgress({ exercise, history }: { exercise: LocalExercis
   const since = new Date();
   since.setMonth(since.getMonth() - PERIODS[period].months);
   const shown = PERIODS[period].months ? rows.filter((r) => r.session.startedAt >= since.getTime()) : rows;
+  // The table follows the chart's period, latest first.
+  const latest = [...shown].reverse();
+  const listed = expanded ? latest : latest.slice(0, LISTED);
   // An estimated 1RM is not a weight actually lifted: its record is not shown.
   const records = rows.length ? (metric.higherIsBetter ? Math.max(...rows.map((r) => r.y)) : Math.min(...rows.map((r) => r.y))) : undefined;
 
@@ -60,7 +67,7 @@ export function ExerciseProgress({ exercise, history }: { exercise: LocalExercis
         </div>
         <div className="seg" role="group" aria-label="Période du graphique">
           {(Object.keys(PERIODS) as Period[]).map((p) => (
-            <button key={p} type="button" aria-pressed={p === period} onClick={() => chartSettings.set({ period: p })}>
+            <button key={p} type="button" aria-pressed={p === period} onClick={() => (chartSettings.set({ period: p }), setExpanded(false))}>
               {PERIODS[p].label}
             </button>
           ))}
@@ -74,28 +81,35 @@ export function ExerciseProgress({ exercise, history }: { exercise: LocalExercis
           <LineChart points={shown.map((r) => ({ t: r.session.startedAt, y: r.y }))} format={metric.format} label={`${metric.label}, ${exercise.name}`} />
         )}
       </div>
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Date</th>
-              <th scope="col">{metric.label}</th>
-              <th scope="col">Séries</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...rows].reverse().map((r) => (
-              <tr key={r.session.id}>
-                <td>
-                  <Link to={`/historique/${r.session.id}`}>{fullFmt.format(r.session.startedAt)}</Link>
-                </td>
-                <td style={{ fontWeight: 700 }}>{metric.format(r.y)}</td>
-                <td className="small muted">{r.sets.map((s) => formatSetValues(exercise.exerciseType, s)).join(', ')}</td>
+      {listed.length > 0 && (
+        <div className="card stack" style={{ overflowX: 'auto' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">{metric.label}</th>
+                <th scope="col">Séries</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {listed.map((r) => (
+                <tr key={r.session.id}>
+                  <td>
+                    <Link to={`/historique/${r.session.id}`}>{fullFmt.format(r.session.startedAt)}</Link>
+                  </td>
+                  <td style={{ fontWeight: 700 }}>{metric.format(r.y)}</td>
+                  <td className="small muted">{r.sets.map((s) => formatSetValues(exercise.exerciseType, s)).join(', ')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!expanded && shown.length > LISTED && (
+            <button type="button" className="btn btn-ghost" onClick={() => setExpanded(true)}>
+              Voir les {shown.length - LISTED} autres séances
+            </button>
+          )}
+        </div>
+      )}
     </>
   );
 }
