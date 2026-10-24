@@ -1349,3 +1349,13 @@ select.input {
 .month[open] > .month-head {
   margin-bottom: 4px;
 }
+.record-stat {
+  color: inherit;
+  text-decoration: none;
+}
+.record-stat:hover {
+  background: var(--surface2);
+}
+.record-stat .value {
+  font-size: 22px;
+}

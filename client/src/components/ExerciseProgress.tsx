@@ -19,6 +19,7 @@ const chartSettings = createStore<{ period: Period }>({ period: '3m' }, 'halko.c
 // Sessions listed under the chart before « Voir les … autres ».
 const LISTED = 10;
 
+const shortFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 const fullFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 
 // Chart and table of an exercise's finished sessions, for one measure at a time (charge, volume…).
@@ -42,8 +43,33 @@ export function ExerciseProgress({ exercise, history }: { exercise: LocalExercis
   // An estimated 1RM is not a weight actually lifted: its record is not shown.
   const records = rows.length ? (metric.higherIsBetter ? Math.max(...rows.map((r) => r.y)) : Math.min(...rows.map((r) => r.y))) : undefined;
 
+  // Best of each measure over the whole history, and the session it was set in (the first, on a tie).
+  // The estimated 1RM is left out: it is not a weight actually lifted.
+  const bests = metrics
+    .filter((m) => m.id !== '1rm')
+    .map((m) => {
+      let best: { value: number; session: LocalSession } | undefined;
+      for (const h of history) {
+        const value = m.best(h.sets);
+        if (value !== undefined && (!best || (m.higherIsBetter ? value > best.value : value < best.value))) best = { value, session: h.session };
+      }
+      return best && { metric: m, ...best };
+    })
+    .filter((b) => b !== undefined);
+
   return (
     <>
+      {bests.length > 0 && (
+        <div className="stats" aria-label="Records">
+          {bests.map((b) => (
+            <Link key={b.metric.id} to={`/historique/${b.session.id}`} className="stat record-stat">
+              <span className="small muted">{b.metric.label}</span>
+              <span className="value">{b.metric.format(b.value)}</span>
+              <span className="small muted">{shortFmt.format(b.session.startedAt)}</span>
+            </Link>
+          ))}
+        </div>
+      )}
       {metrics.length > 1 && (
         <div className="chips" role="group" aria-label="Mesure">
           {metrics.map((m) => (
