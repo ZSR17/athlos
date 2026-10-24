@@ -9,6 +9,7 @@ const NAV: { to: string; label: string; short?: string; icon: IconName; end?: bo
   { to: '/exercices', label: 'Exercices', icon: 'dumbbell' },
   { to: '/historique', label: 'Historique', icon: 'chart' },
   { to: '/disques', label: 'Calculateur de disques', short: 'Calculateur', icon: 'plate' },
+  { to: '/1rm', label: 'Calculateur de 1RM', short: '1RM', icon: 'percent' },
   { to: '/reglages', label: 'Réglages', icon: 'settings' },
 ];
 
