@@ -1,7 +1,7 @@
 import { DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { type Crop, EQUIPMENT_LABELS, EXERCISE_TYPE_IDS, EXERCISE_TYPES, type ExerciseType, MUSCLE_IDS, MUSCLES, type MuscleId } from '@halko/shared';
+import { type Crop, EQUIPMENT_LABELS, EXERCISE_TYPE_IDS, EXERCISE_TYPES, type ExerciseType, MUSCLE_IDS, MUSCLES, type MuscleId, type UploadResponse } from '@halko/shared';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -17,6 +17,7 @@ import {
   createExercise,
   deleteExercise,
   importMediaFromUrl,
+  importMotionFromUrl,
   resetExercise,
   updateExercise,
   uploadMedia,
@@ -207,9 +208,26 @@ export function ExerciseEditor() {
       release: () => URL.revokeObjectURL(src),
     });
   };
-  const onLink = () => {
+  // A GIF or video is kept at once; a still photo is framed first, like a photo from a file.
+  const onLink = async () => {
     const url = link.trim();
     if (!url) return;
+    setError(null);
+    setBusy('Import depuis le lien…');
+    let motion: UploadResponse | null;
+    try {
+      motion = await importMotionFromUrl(url);
+    } catch (err) {
+      setError(err instanceof UploadError ? err.message : 'Import impossible.');
+      return;
+    } finally {
+      setBusy(null);
+    }
+    if (motion) {
+      const kept = motion;
+      if (await addMedia('Import depuis le lien…', async () => kept)) setLink('');
+      return;
+    }
     setCropping({
       src: url,
       message: 'Import de l’image…',
@@ -406,16 +424,16 @@ export function ExerciseEditor() {
             value={link}
             onChange={(e) => setLink(e.target.value)}
             onKeyDown={(e) => {
-              // Enter imports the image instead of saving the whole exercise.
+              // Enter imports from the link instead of saving the whole exercise.
               if (e.key !== 'Enter') return;
               e.preventDefault();
-              onLink();
+              void onLink();
             }}
-            placeholder="Ou colle le lien d’une image"
-            aria-label="Lien d’une image sur Internet"
+            placeholder="Ou colle le lien d’une image, d’un GIF ou d’une vidéo"
+            aria-label="Lien d’une image, d’un GIF ou d’une vidéo sur Internet"
             disabled={!!busy}
           />
-          <button type="button" className="btn" disabled={!!busy || !link.trim()} onClick={onLink}>
+          <button type="button" className="btn" disabled={!!busy || !link.trim()} onClick={() => void onLink()}>
             Importer
           </button>
         </div>

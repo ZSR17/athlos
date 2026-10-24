@@ -64,21 +64,30 @@ const UPLOAD_ERRORS: Record<number, string> = {
 };
 
 const LINK_ERRORS: Record<number, string> = {
-  400: 'Lien invalide : colle l’adresse complète d’une image (https://…).',
-  413: 'Image trop lourde (20 Mo maximum).',
-  415: 'Ce lien ne mène pas à une image : ouvre l’image seule, puis copie son adresse.',
-  502: 'Image introuvable à cette adresse.',
+  400: 'Lien invalide : colle l’adresse complète (https://…).',
+  413: 'Fichier trop lourd (20 Mo pour une image, 100 Mo pour un GIF ou une vidéo).',
+  415: 'Ce lien ne mène pas à une image, un GIF ou une vidéo : ouvre-la seule, puis copie son adresse (une page comme YouTube ne marche pas).',
+  502: 'Rien de trouvé à cette adresse.',
   503: UPLOAD_ERRORS[503]!,
 };
 
+async function fromUrl(body: { url: string; crop?: Crop; frameFirst?: boolean }): Promise<UploadResponse | null> {
+  try {
+    return await api<UploadResponse>('/media/from-url', { method: 'POST', body: JSON.stringify(body) });
+  } catch (err) {
+    if (err instanceof ApiError && err.code === 'needs_framing') return null;
+    if (err instanceof ApiError) throw new UploadError(LINK_ERRORS[err.status] ?? 'Import refusé par le serveur.');
+    throw new UploadError('Serveur injoignable : il faut être connecté pour importer depuis un lien.');
+  }
+}
+
+// Asks the server to download a GIF or video from a link and keep it. Null when the link is a still photo:
+// it is not kept yet, to be framed first, then sent with importMediaFromUrl.
+export const importMotionFromUrl = (url: string) => fromUrl({ url, frameFirst: true });
+
 // Asks the server to download a picture from a link and keep it (only `crop` of it), like an uploaded photo.
 export async function importMediaFromUrl(url: string, crop?: Crop): Promise<UploadResponse> {
-  try {
-    return await api<UploadResponse>('/media/from-url', { method: 'POST', body: JSON.stringify({ url, crop }) });
-  } catch (err) {
-    if (err instanceof ApiError) throw new UploadError(LINK_ERRORS[err.status] ?? 'Import refusé par le serveur.');
-    throw new UploadError('Serveur injoignable : il faut être connecté pour importer une image.');
-  }
+  return (await fromUrl({ url, crop }))!;
 }
 
 // Sends a photo, GIF or video to the server, which compresses it (and keeps only `crop` of a photo).

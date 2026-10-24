@@ -82,6 +82,32 @@ describe('media', () => {
     expect(remote.mock.calls.map(([u]) => String(u))).not.toContain('http://127.0.0.1/secret.png');
   });
 
+  it('takes GIFs and videos from a link too, and asks to frame a still photo first', async () => {
+    // Without ffmpeg, a moving picture is answered 503: that shows it went to the video conversion.
+    const headers = await start({ FFMPEG_PATH: path.join(tempDir(), 'missing-ffmpeg') });
+    const frame = (color: string) => sharp({ create: { width: 20, height: 20, channels: 3, background: color } }).png().toBuffer();
+    const gif = await sharp([await frame('#ff0000'), await frame('#0000ff')], { join: { animated: true } }).gif().toBuffer();
+    const png = await frame('#00ff00');
+    vi.stubGlobal('fetch', async (url: URL) => {
+      if (url.pathname === '/move.gif') return new Response(gif, { headers: { 'content-type': 'image/gif' } });
+      if (url.pathname === '/clip') return new Response(gif, { headers: { 'content-type': 'application/octet-stream' } });
+      if (url.pathname === '/blob') return new Response('hello', { headers: { 'content-type': 'application/octet-stream' } });
+      return new Response(png, { headers: { 'content-type': 'image/png' } });
+    });
+    const fromUrl = (url: string, frameFirst?: boolean) =>
+      ctx.app.inject({ method: 'POST', url: '/api/v1/media/from-url', headers, payload: { url, frameFirst } });
+
+    expect((await fromUrl('https://93.184.216.34/move.gif', true)).statusCode).toBe(503);
+    // Sent as plain binary data: recognised from its first bytes.
+    expect((await fromUrl('https://93.184.216.34/clip', true)).statusCode).toBe(503);
+    expect((await fromUrl('https://93.184.216.34/blob', true)).json()).toEqual({ error: 'not_media' });
+
+    const still = await fromUrl('https://93.184.216.34/photo.png', true);
+    expect([still.statusCode, still.json()]).toEqual([422, { error: 'needs_framing' }]);
+    expect(ctx.db.select().from(media).all()).toHaveLength(0);
+    expect((await fromUrl('https://93.184.216.34/photo.png')).statusCode).toBe(200);
+  });
+
   it('crops photos to the part chosen in the app before compressing them', async () => {
     const headers = await start();
     // Left half red, right half blue: keeping the right third must give only blue.

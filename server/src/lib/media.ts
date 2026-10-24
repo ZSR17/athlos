@@ -150,16 +150,20 @@ async function storeVideo(db: Db, dataDir: string, input: Buffer, tools: Tools):
   }
 }
 
+// Videos and animated GIFs (stored as videos) move; any other picture is a still photo.
+export async function isMotion(input: Buffer, mime: string): Promise<boolean> {
+  if (mime.startsWith('video/')) return true;
+  if (mime !== 'image/gif') return false;
+  const pages = await sharp(input)
+    .metadata()
+    .then((m) => m.pages ?? 1)
+    .catch(() => 1);
+  return pages > 1;
+}
+
 // Photos become WebP (cropped to `crop` if given); videos and animated GIFs become MP4 with a poster image.
 export async function storeUpload(db: Db, dataDir: string, input: Buffer, mime: string, tools: Tools, crop?: Crop): Promise<string[]> {
-  if (mime.startsWith('video/')) return storeVideo(db, dataDir, input, tools);
-  if (!mime.startsWith('image/')) throw new UnsupportedMedia(mime);
-  if (mime === 'image/gif') {
-    const pages = await sharp(input)
-      .metadata()
-      .then((m) => m.pages ?? 1)
-      .catch(() => 1);
-    if (pages > 1) return storeVideo(db, dataDir, input, tools);
-  }
+  if (!mime.startsWith('image/') && !mime.startsWith('video/')) throw new UnsupportedMedia(mime);
+  if (await isMotion(input, mime)) return storeVideo(db, dataDir, input, tools);
   return [await storeImage(db, dataDir, input, crop)];
 }
