@@ -123,7 +123,7 @@ function Progress({ exercises, logs }: { exercises: LocalExercise[]; logs: { exe
   const rows = (history ?? [])
     .map((h) => ({ t: h.session.startedAt, y: metric.best(h.sets), sets: h.sets }))
     .filter((r): r is typeof r & { y: number } => r.y !== undefined);
-  // An estimated 1RM is not a weight actually lifted: no record shown for it.
+  // An estimated 1RM is not a weight actually lifted: its record is not shown.
   const records = rows.length ? (metric.higherIsBetter ? Math.max(...rows.map((r) => r.y)) : Math.min(...rows.map((r) => r.y))) : undefined;
 
   return (
@@ -152,7 +152,12 @@ function Progress({ exercises, logs }: { exercises: LocalExercise[]; logs: { exe
           <h2 style={{ fontSize: 15 }}>
             {metric.label} · {exercise.name}
           </h2>
-          {records !== undefined && metric.id !== '1rm' && <span className="record">Record : {metric.format(records)}</span>}
+          {records !== undefined && (
+            // Hidden rather than removed for the 1RM, so the chart does not move when switching.
+            <span className="record" style={metric.id === '1rm' ? { visibility: 'hidden' } : undefined} aria-hidden={metric.id === '1rm'}>
+              Record : {metric.format(records)}
+            </span>
+          )}
         </div>
         {rows.length < 2 && <p className="small muted" style={{ margin: 0 }}>La courbe apparaît à partir de 2 séances.</p>}
         {rows.length >= 2 && <LineChart points={rows} format={metric.format} label={`${metric.label}, ${exercise.name}`} />}
