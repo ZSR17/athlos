@@ -263,7 +263,7 @@ export function ExerciseEditor() {
   return (
     <form className="page" style={{ maxWidth: 720 }} onSubmit={save}>
       <header className="row between">
-        <BackLink to={id ? `/exercices/${id}` : '/exercices'} label="Annuler" />
+        <BackLink to={id ? `/exercices/${id}` : '/exercices'} label="Annuler" icon="close" />
         <div className="row" style={{ gap: 4 }}>
           {builtin && existing?.customized && (
             <button
