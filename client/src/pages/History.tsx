@@ -3,11 +3,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../components/Icon.tsx';
-import { LineChart } from '../components/LineChart.tsx';
+import { ExerciseProgress } from '../components/ExerciseProgress.tsx';
 import { type LocalExercise, db } from '../db/db.ts';
 import { exerciseHistory, finishedSessions } from '../db/sessions.ts';
-import { formatSetValues } from '../lib/format.ts';
-import { metricsForType } from '../lib/progress.ts';
 import { formatMinutes, formatTonnage, sessionDurationMs, sessionVolumeG, startOfWeek } from '../lib/stats.ts';
 
 const dayFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' });
@@ -113,18 +111,9 @@ function Progress({ exercises, logs }: { exercises: LocalExercise[]; logs: { exe
   }, [exercises, logs]);
   const [selected, setSelected] = useState<string | null>(null);
   const exercise = ordered.find((e) => e.id === selected) ?? ordered[0];
-  const metrics = exercise ? metricsForType(exercise.exerciseType) : [];
-  const [metricId, setMetricId] = useState<string | null>(null);
-  const metric = metrics.find((m) => m.id === metricId) ?? metrics[0];
   const history = useLiveQuery(() => (exercise ? exerciseHistory(exercise.id) : []), [exercise?.id]);
 
-  if (!exercise || !metric) return <p className="muted">Termine une séance pour voir ta progression.</p>;
-
-  const rows = (history ?? [])
-    .map((h) => ({ t: h.session.startedAt, y: metric.best(h.sets), sets: h.sets }))
-    .filter((r): r is typeof r & { y: number } => r.y !== undefined);
-  // An estimated 1RM is not a weight actually lifted: its record is not shown.
-  const records = rows.length ? (metric.higherIsBetter ? Math.max(...rows.map((r) => r.y)) : Math.min(...rows.map((r) => r.y))) : undefined;
+  if (!exercise) return <p className="muted">Termine une séance pour voir ta progression.</p>;
 
   return (
     <div className="stack">
@@ -138,50 +127,7 @@ function Progress({ exercises, logs }: { exercises: LocalExercise[]; logs: { exe
           ))}
         </select>
       </label>
-      {metrics.length > 1 && (
-        <div className="chips" role="group" aria-label="Mesure">
-          {metrics.map((m) => (
-            <button key={m.id} type="button" className="chip" aria-pressed={m.id === metric.id} onClick={() => setMetricId(m.id)}>
-              {m.label}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="card stack">
-        <div className="row between wrap">
-          <h2 style={{ fontSize: 15 }}>
-            {metric.label} · {exercise.name}
-          </h2>
-          {records !== undefined && (
-            // Hidden rather than removed for the 1RM, so the chart does not move when switching.
-            <span className="record" style={metric.id === '1rm' ? { visibility: 'hidden' } : undefined} aria-hidden={metric.id === '1rm'}>
-              Record : {metric.format(records)}
-            </span>
-          )}
-        </div>
-        {rows.length < 2 && <p className="small muted" style={{ margin: 0 }}>La courbe apparaît à partir de 2 séances.</p>}
-        {rows.length >= 2 && <LineChart points={rows} format={metric.format} label={`${metric.label}, ${exercise.name}`} />}
-      </div>
-      <div className="card" style={{ overflowX: 'auto' }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th scope="col">Date</th>
-              <th scope="col">{metric.label}</th>
-              <th scope="col">Séries</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...rows].reverse().map((r) => (
-              <tr key={r.t}>
-                <td>{fullFmt.format(r.t)}</td>
-                <td style={{ fontWeight: 700 }}>{metric.format(r.y)}</td>
-                <td className="small muted">{r.sets.map((s) => formatSetValues(exercise.exerciseType, s)).join(', ')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ExerciseProgress exercise={exercise} history={history ?? []} />
     </div>
   );
 }

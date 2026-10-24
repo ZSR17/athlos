@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap.tsx';
 import { ExerciseMedia } from '../components/ExerciseMedia.tsx';
+import { ExerciseProgress } from '../components/ExerciseProgress.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { Sheet } from '../components/Sheet.tsx';
 import { db } from '../db/db.ts';
+import { exerciseHistory } from '../db/sessions.ts';
 import { addItem, createWorkout } from '../db/workouts.ts';
 import { metricLongLabel, metricsFor } from '../lib/targets.ts';
 
@@ -18,6 +20,7 @@ export function ExerciseDetail() {
   const location = useLocation();
   const exercise = useLiveQuery(() => db.exercises.get(id), [id]);
   const workouts = useLiveQuery(() => db.workouts.orderBy('position').filter((w) => !w.deleted).toArray(), []);
+  const history = useLiveQuery(() => exerciseHistory(id), [id]);
   const [bigMap, setBigMap] = useState(false);
   const [picking, setPicking] = useState(false);
 
@@ -118,6 +121,13 @@ export function ExerciseDetail() {
           ))}
         </div>
       </div>
+
+      {!!history?.length && (
+        <section className="stack">
+          <h2 className="label">Historique</h2>
+          <ExerciseProgress exercise={exercise} history={history} />
+        </section>
+      )}
 
       {exercise.instructions.length > 0 && (
         <section className="stack" style={{ gap: 8 }}>
