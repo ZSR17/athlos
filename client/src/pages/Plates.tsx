@@ -130,10 +130,7 @@ export function Plates() {
       </section>
 
       <section className="stack">
-        <div className="stack" style={{ gap: 4 }}>
-          <h2 className="section-title">Mes disques</h2>
-          <span className="small muted">Indique combien tu en as au total : ils vont par deux, un de chaque côté.</span>
-        </div>
+        <h2 className="section-title">Mes disques</h2>
         {plates.map((p) => (
           <div key={p.id} className="card row plate-row">
             <label className="field plate-weight">
