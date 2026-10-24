@@ -19,6 +19,7 @@ import { ExerciseList } from '../components/ExerciseList.tsx';
 import { Icon } from '../components/Icon.tsx';
 import { Sheet } from '../components/Sheet.tsx';
 import { WorkoutItemCard, WorkoutItemView } from '../components/WorkoutItemCard.tsx';
+import { WorkoutProgress } from '../components/WorkoutProgress.tsx';
 import { type LocalWorkoutItem, db } from '../db/db.ts';
 import { deleteWorkout, duplicateWorkout, liveItems, newItem, saveWorkout, supersetLabels } from '../db/workouts.ts';
 import { useStartSession } from '../lib/useStartSession.ts';
@@ -199,6 +200,7 @@ export function WorkoutEditor({ editing = false }: { editing?: boolean }) {
           </div>
           {musclesCard}
         </div>
+        <WorkoutProgress workoutId={id} name={workout.name} />
       </div>
     );
   }

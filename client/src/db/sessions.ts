@@ -226,6 +226,13 @@ export async function exerciseHistory(exerciseId: string, db: HalkoDb = defaultD
     .sort((a, b) => a.session.startedAt - b.session.startedAt);
 }
 
+// Finished sessions of a workout, oldest first, each with its logged sets.
+export async function workoutHistory(workoutId: string, db: HalkoDb = defaultDb): Promise<{ session: LocalSession; sets: LocalSetLog[] }[]> {
+  const sessions = (await finishedSessions(db)).filter((s) => s.workoutId === workoutId).reverse();
+  const logs = (await db.setLogs.where('sessionId').anyOf(sessions.map((s) => s.id)).toArray()).filter((l) => !l.deleted);
+  return sessions.map((session) => ({ session, sets: logs.filter((l) => l.sessionId === session.id) }));
+}
+
 // Working sets with a load and reps, from finished sessions, for each load-and-reps exercise (by name).
 export async function liftedSets(db: HalkoDb = defaultDb): Promise<{ exercise: LocalExercise; sets: LocalSetLog[] }[]> {
   const sessions = new Set((await finishedSessions(db)).map((s) => s.id));
