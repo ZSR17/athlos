@@ -50,7 +50,11 @@ export function LineChart({
   if (empty) return null;
 
   const ys = points.map((p) => p.y);
-  const ticks = niceTicks(Math.min(...ys), Math.max(...ys));
+  const low = Math.min(...ys);
+  const high = Math.max(...ys);
+  // Room under the lowest point, so it does not sit on the bottom edge as if it were 0 (never below 0).
+  const room = (high - low) * 0.2 || Math.abs(high) * 0.1 || 1;
+  const ticks = niceTicks(low >= 0 ? Math.max(0, low - room) : low - room, high);
   const yMin = Math.min(ticks[0]!, ...ys);
   const yMax = Math.max(ticks[ticks.length - 1]!, ...ys);
   const t0 = points[0]!.t;
